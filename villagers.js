@@ -4,7 +4,7 @@ import {waterKey} from './water.js';
 
 export function createVillagers(scene,material){
   const group=new THREE.Group();group.name='villagers';scene.add(group);
-  let agents=[],walkGraph=new Map(),bikeGraph=new Map(),lastTime=null;
+  let agents=[],walkGraph=new Map(),bikeGraph=new Map(),lastTime=null,attractions=[],fishingSpots=new Map();
   const geometries={sphere:new THREE.SphereGeometry(1,8,6),limb:new THREE.CylinderGeometry(1,1,1,6),body:new THREE.CylinderGeometry(.8,1,1,8),shoe:new THREE.BoxGeometry(1,1,1),wheel:new THREE.TorusGeometry(.145,.018,5,16),shadow:new THREE.CircleGeometry(1,16)};
   const shadowMaterial=new THREE.MeshBasicMaterial({color:'#334b3b',transparent:true,opacity:.16,depthWrite:false});
   function mesh(parent,geo,color,scale,pos){const m=new THREE.Mesh(geometries[geo],material(color));m.scale.set(...scale);m.position.set(...pos);parent.add(m);return m;}
@@ -46,14 +46,26 @@ export function createVillagers(scene,material){
         cranks.push(mesh(root,'shoe','#665b49',[.07,.035,.09],[0,0,0]));
       }
     }
-    return {root,figure,arms,legs,wheels,cranks,pedalLegs,bike};
+    const rod=new THREE.Mesh(geometries.limb,material('#795b39'));rod.scale.set(.009,.65,.009);rod.position.set(.08,.38,.24);rod.rotation.x=.85;rod.visible=false;figure.add(rod);
+    return {root,figure,arms,legs,wheels,cranks,pedalLegs,bike,rod};
   }
   function rebuild(blocks,water,unlocked){
     // Geometry and materials are shared; rebuilding removes instances only.
     group.clear();agents=[];lastTime=null;
     walkGraph=buildNavigation(blocks,water);bikeGraph=buildNavigation(blocks,water,true);
-    if(!unlocked)return;
-    const homes=Object.keys(blocks).filter(k=>blocks[k].type==='house'&&Number(k.split(',')[1])===0);
+    attractions=[];fishingSpots=new Map();
+    for(const [k,block]of Object.entries(blocks)){
+      const [x,y,z]=k.split(',').map(Number);if(y!==0||!block.role||block.role==='home')continue;
+      for(const [dx,dz]of [[0,1],[1,0],[-1,0],[0,-1]]){const id=waterKey(x+dx,z+dz);if(walkGraph.has(id))attractions.push(id);}
+      if(['fishing','boathouse'].includes(block.role))for(const [id,node]of walkGraph){
+        if(Math.abs(node.x-x)+Math.abs(node.z-z)>4)continue;
+        const shore=[[0,1],[1,0],[-1,0],[0,-1]].find(([dx,dz])=>water[waterKey(node.x+dx,node.z+dz)]);
+        if(shore){attractions.push(id);if(block.role==='fishing')fishingSpots.set(id,shore);}
+      }
+    }
+    attractions=[...new Set(attractions)];
+    if(!unlocked&&!Object.values(blocks).some(b=>b.type==='camp'))return;
+    const homes=Object.keys(blocks).filter(k=>(blocks[k].type==='camp'||unlocked&&blocks[k].type==='house')&&Number(k.split(',')[1])===0);
     homes.slice(0,12).forEach((k,i)=>{
       const [x,,z]=k.split(',').map(Number);
       const starts=[[x,z+1],[x+1,z],[x-1,z],[x,z-1]].map(p=>waterKey(...p)).filter(id=>walkGraph.has(id));
@@ -79,11 +91,14 @@ export function createVillagers(scene,material){
     const dt=lastTime===null?0:Math.min(.06,(t-lastTime)/1000);lastTime=t;
     if(reducedMotion)return;
     for(const a of agents){
-      if(a.pause>0){a.pause-=dt;if(!a.bike){a.legs.forEach(l=>l.rotation.x=0);a.arms.forEach(l=>l.rotation.x=0);a.figure.position.y=0;}continue;}
+      if(a.pause>0){a.pause-=dt;if(!a.bike){const shore=fishingSpots.get(a.id);a.rod.visible=!!shore;a.legs.forEach(l=>l.rotation.x=0);a.arms.forEach(l=>l.rotation.x=shore?-1:0);a.figure.position.y=0;if(shore)a.root.rotation.y=Math.atan2(shore[0],shore[1]);}continue;}
+      a.rod.visible=false;
       if(!a.route.length){
         const choices=reachable(a.graph,a.id,6).filter(id=>id!==a.id);
         if(!choices.length)continue;
-        const destination=choices[(a.index*7+a.choices++*11)%choices.length];a.route=findRoute(a.graph,a.id,destination).slice(1);
+        const visits=attractions.filter(id=>id!==a.id&&a.graph.has(id)&&findRoute(a.graph,a.id,id).length);
+        const options=visits.length&&a.choices%2===0?visits:choices;
+        const destination=options[(a.index*7+a.choices++*11)%options.length];a.route=findRoute(a.graph,a.id,destination).slice(1);
       }
       if(!a.route.length)continue;
       const start=a.graph.get(a.id),end=a.graph.get(a.route[0]);
@@ -103,7 +118,7 @@ export function createVillagers(scene,material){
         a.arms.forEach((arm,i)=>arm.rotation.x=-Math.sin(a.phase+i*Math.PI)*.28);
         a.figure.position.y=Math.abs(Math.sin(a.phase))*.012;
       }
-      if(a.progress>=1){a.id=a.route.shift();a.progress=0;if(!a.route.length)a.pause=a.bike?.25:.7+(a.index%3)*.5;}
+      if(a.progress>=1){a.id=a.route.shift();a.progress=0;if(!a.route.length)a.pause=attractions.includes(a.id)?4+(a.index%3):a.bike?.25:.7+(a.index%3)*.5;}
     }
   }
   return {group,rebuild,animate,get agents(){return agents;}};

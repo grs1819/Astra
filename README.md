@@ -117,3 +117,30 @@ Beta has separate browser saves, so it starts with a fresh town and does not rea
 or overwrite live towns. Saves persist between beta updates, but beta towns are
 not automatically transferred to live. The two sites share GitHub Pages hosting;
 this is a separate test game and save namespace, not a separate database.
+
+## Building purposes and camping
+
+Use **Role (8)**, choose Home, Fishing hut, Outdoor supply shop, Bakery & café,
+Inn & lodge, Carpenter’s workshop, or Boathouse, then click a house. The purpose
+applies to all connected house rooms and adds a sign and matching entrance props.
+New rooms extended directly from a role building inherit its purpose. Residents
+visit reachable entrances and pause there; waterfront buildings also attract
+visits to nearby banks, where walkers can fish beside fishing huts. Roles are an
+initial activity layer: no money, inventories, boat simulation, or production yet.
+
+Use **Camp (7)** on empty dry ground to place a lean-to. Click it with Camp again
+to upgrade to a tent, then a raised glamping shelter with bedding and a lantern.
+Camps welcome walkers before the cottage population unlock. Camps block movement
+through their occupied tile, cannot be flooded, and support Undo and autosave.
+Right-click removes a campsite. Upgrades remain on the same one-tile footprint.
+
+Adjacent campsite tiles now form a shared camp. Two connected tiles create one
+campfire gathering tile with a log seat and tent accommodation. Four create a
+stone firepit with chairs, table, and lantern, surrounded by glamping shelters.
+Ground pads join across occupied tiles; props stay inside the campsite footprint.
+Removing or reconnecting tiles recalculates groups, including irregular shapes.
+Clicking a connected camp upgrades its shelters together; automatic size upgrades
+remain reversible, while manual upgrades persist. Role buildings now display
+larger color-coded fascias, awnings, and projecting signs on exposed sides.
+
+Connected camp shelters now merge into a continuous roof and deck across their actual footprint, with perimeter-only supports. The gathering area moves to a nearby empty dry tile outside the fabric; it hides if no space is available and relocates when that tile is built on. Role signage appears only on one exposed entrance side per connected building, preferring the front.

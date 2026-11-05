@@ -39,7 +39,7 @@ Your selected tool and materials stay active while the dock is collapsed; 1–6 
 - **Alt-click** a room or deck to apply your selected timber and roof without extending it.
 - **Undo / Ctrl+Z / Cmd+Z** restores the previous edit, including removed extensions.
 
-To make an archway, build two two-floor towers with one empty tile between them, then click an inner upper wall to bridge the gap. Stone arch supports appear automatically. Adjacent top rooms connect their roof ridges along the X direction; this is an initial modular system, not a full Townscaper-style geometry engine.
+To make an archway, build two two-floor towers with one empty tile between them, then click an inner upper wall to bridge the gap. Stone arch supports appear automatically. Single cottages get hipped roofs. Connected roof footprints share a sloped ridge along their longest direction. Exposed lower roofs beside taller rooms become railed timber terraces, with doorways from adjacent rooms. Raised waterside entrances gain steps where the frontage is dry and open. Build directly on a terrace to add another floor; roofs and terraces recalculate after placement, removal, or undo. This remains a grid-based modular system.
 
 Discoveries are earned from distinct cottage plots: villagers at 3, birch at 6, terracotta at 9, cedar and slate at 12. Discoveries stay unlocked after removal and undo. Villagers currently wander decoratively.
 

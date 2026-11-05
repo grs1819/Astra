@@ -25,3 +25,11 @@ test('saved data is sanitized and balconies can become enclosed rooms',()=>{
   const b=normalize({blocks:{'0,1,0':{type:'balcony'},'99,0,0':house,'0,-1,0':house,'0,0,0':house}}).blocks;
   assert.equal(Object.keys(b).length,2);assert.equal(canPlace(b,0,1,0,'house'),true);
 });
+
+test('roof footprints align ridges and create reversible terraces beside taller rooms',async()=>{
+  const {roofPlan}=await import('../town.js');
+  const b={'0,0,0':house};assert.equal(roofPlan(b).get('0,0,0').kind,'hip');
+  b['0,0,1']=house;let roofs=roofPlan(b);assert.equal(roofs.get('0,0,0').axis,'z');assert.equal(roofs.get('0,0,0'),roofs.get('0,0,1'));
+  b['0,1,1']=house;roofs=roofPlan(b);assert.equal(roofs.get('0,0,0').kind,'terrace');assert.equal(roofs.has('0,0,1'),false);assert.equal(roofs.get('0,1,1').kind,'hip');
+  delete b['0,1,1'];assert.equal(roofPlan(b).get('0,0,0').kind,'gable');
+});

@@ -55,3 +55,29 @@ export function archAxis(blocks,x,y,z) {
   }
   return null;
 }
+
+// Recompute roof forms from the occupied footprint; no extra saved state.
+export function roofPlan(blocks){
+  const plan=new Map(),pending=new Set();
+  for(const [k,b]of Object.entries(blocks)){
+    const [x,y,z]=k.split(',').map(Number);
+    if(b.type!=='house'||blocks[key(x,y+1,z)])continue;
+    const terrace=directions.some(([dx,,dz])=>blocks[key(x+dx,y+1,z+dz)]?.type==='house');
+    if(terrace)plan.set(k,{kind:'terrace'});else pending.add(k);
+  }
+  while(pending.size){
+    const first=pending.values().next().value,queue=[first];pending.delete(first);
+    for(let i=0;i<queue.length;i++){
+      const [x,y,z]=queue[i].split(',').map(Number);
+      for(const [dx,,dz]of directions){const k=key(x+dx,y,z+dz);if(pending.delete(k))queue.push(k);}
+    }
+    const coords=queue.map(k=>k.split(',').map(Number));
+    const xs=coords.map(p=>p[0]),zs=coords.map(p=>p[2]);
+    const spanX=Math.max(...xs)-Math.min(...xs),spanZ=Math.max(...zs)-Math.min(...zs);
+    const axis=spanX>=spanZ?'x':'z',cross=axis==='x'?zs:xs;
+    const lo=Math.min(...cross)-.5,hi=Math.max(...cross)+.5;
+    const form={kind:queue.length===1?'hip':'gable',axis,lo,hi,ridge:(lo+hi)/2,height:Math.min(.8,.44*(hi-lo))};
+    for(const k of queue)plan.set(k,form);
+  }
+  return plan;
+}

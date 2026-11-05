@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
 import {createWaterView} from './water-view.js';
-import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis} from './town.js';
+import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan} from './town.js';
 
 const $=s=>document.querySelector(s);
 const canvas=$('#world');
@@ -62,15 +62,48 @@ const ghost=new THREE.Mesh(new THREE.BoxGeometry(1.01,.96,1.01),new THREE.MeshBa
 const invisible=new THREE.MeshBasicMaterial({visible:false});
 const timber={oak:'#c6a171',birch:'#ded4b3',cedar:'#b77d61'};
 const roofs={moss:'#718a58',clay:'#b87755',slate:'#718b94'};
+let roofForms=new Map();
 function roof(parent,x,y,z,color){
-  // Touching roofs share their ridge; internal gables disappear.
-  const left=blocks[key(x-1,y,z)]?.type==='house'&&!blocks[key(x-1,y+1,z)];
-  const right=blocks[key(x+1,y,z)]?.type==='house'&&!blocks[key(x+1,y+1,z)];
-  const shape=new THREE.Shape();shape.moveTo(-.56,0);shape.lineTo(0,.44);shape.lineTo(.56,0);shape.closePath();
-  const geo=new THREE.ExtrudeGeometry(shape,{depth:1.04,bevelEnabled:false});geo.rotateY(Math.PI/2);geo.translate(-.52,0,0);
-  const m=new THREE.Mesh(geo,material(color));m.position.set(x,y+1,z);m.castShadow=true;parent.add(m);m.userData={position:[x,y,z],normal:[0,1,0]};targets.push(m);
-  if(!left)box(parent,.035,.08,.93,x-.53,y+1.015,z,'#7c684c');
-  if(!right)box(parent,.035,.08,.93,x+.53,y+1.015,z,'#7c684c');
+  const form=roofForms.get(key(x,y,z));if(!form)return;
+  const top=y+1;
+  if(form.kind==='terrace'){
+    const deck=box(parent,1,.08,1,x,top+.04,z,'#bba47d');
+    deck.userData={position:[x,y,z],normal:[0,1,0]};targets.push(deck);
+    for(let i=-2;i<=2;i++)box(parent,.016,.012,.98,x+i*.19,top+.085,z,'#967c56');
+    for(const [dx,,dz]of directions){
+      const neighbor=roofForms.get(key(x+dx,y,z+dz));
+      if(blocks[key(x+dx,y+1,z+dz)]||neighbor?.kind==='terrace')continue;
+      railing(parent,x,top-.03,z,dx,dz,'#897553');
+    }
+    return;
+  }
+  const vertices=[];
+  function triangle(a,b,c){
+    const normal=new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(new THREE.Vector3(...b),new THREE.Vector3(...a)),new THREE.Vector3().subVectors(new THREE.Vector3(...c),new THREE.Vector3(...a)));
+    if(normal.y<0)[b,c]=[c,b];vertices.push(...a,...b,...c);
+  }
+  if(form.kind==='hip'){
+    const corners=[[x-.53,top,z-.53],[x+.53,top,z-.53],[x+.53,top,z+.53],[x-.53,top,z+.53]];
+    for(let i=0;i<4;i++)triangle(corners[i],corners[(i+1)%4],[x,top+.48,z]);
+  }else{
+    const cross=form.axis==='x'?z:x,along=form.axis==='x'?x:z;
+    const cuts=[cross-.5,...(form.ridge>cross-.5&&form.ridge<cross+.5?[form.ridge]:[]),cross+.5];
+    const height=c=>top+Math.max(0,1-Math.abs(c-form.ridge)/((form.hi-form.lo)/2))*form.height;
+    const point=(a,c,h=height(c))=>form.axis==='x'?[a,h,c]:[c,h,a];
+    for(let i=0;i<cuts.length-1;i++){
+      const c=cuts[i],d=cuts[i+1],a=point(along-.5,c),b=point(along+.5,c),e=point(along+.5,d),f=point(along-.5,d);
+      triangle(a,b,e);triangle(a,e,f);
+      for(const side of [-1,1]){
+        const nx=x+(form.axis==='x'?side:0),nz=z+(form.axis==='z'?side:0);
+        if(roofForms.get(key(nx,y,nz))===form)continue;
+        const edge=along+side*.5;triangle(point(edge,c,top),point(edge,c),point(edge,d));triangle(point(edge,c,top),point(edge,d),point(edge,d,top));
+      }
+    }
+  }
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();
+  const roofMaterial=material(color);roofMaterial.side=THREE.DoubleSide;
+  const m=new THREE.Mesh(geometry,roofMaterial);m.castShadow=true;m.receiveShadow=true;m.userData={position:[x,y,z],normal:[0,1,0]};parent.add(m);targets.push(m);
+  for(const [dx,,dz]of directions)if(!blocks[key(x+dx,y,z+dz)])box(parent,dx?.055:1,.065,dz?.055:1,x+dx*.5,top,z+dz*.5,'#8e7955');
 }
 function railing(parent,x,y,z,dx,dz,color){
   const g=new THREE.Group();g.position.set(x+dx*.46,y+.12,z+dz*.46);g.rotation.y=dx?Math.PI/2:0;parent.add(g);
@@ -88,6 +121,7 @@ function rebuild(){
   renderer.shadowMap.needsUpdate=true;
   clear(buildings);clear(people);targets=[];villagers=[];
   waterAnalysis=waterView.rebuild(water,blocks);
+  roofForms=roofPlan(blocks);
   for(const [k,b]of Object.entries(blocks)){
     const [x,y,z]=k.split(',').map(Number);
     if(b.type==='tree'){tree(buildings,x,z);}
@@ -114,10 +148,19 @@ function rebuild(){
         if(blocks[key(x+dx,y,z+dz)]?.type==='house')continue;
         const face=new THREE.Group();face.position.set(x+dx*.505,y+base,z+dz*.505);face.scale.y=1-base;face.rotation.y=dx?dx*Math.PI/2:dz===-1?Math.PI:0;buildings.add(face);
         for(let h=.17;h<1;h+=.19)box(face,1,.017,.016,0,h,0,'#987951');
-        if(y===0&&dz===1){box(face,.24,.57,.035,0,.285,0,'#6c5942');box(face,.035,.035,.04,.065,.29,.02,'#e1c98c');}
+        const terraceDoor=y>0&&(blocks[key(x+dx,y,z+dz)]?.type==='balcony'||roofForms.get(key(x+dx,y-1,z+dz))?.kind==='terrace');
+        if((y===0&&dz===1)||terraceDoor){box(face,.24,.57,.035,0,.285,0,'#6c5942');box(face,.035,.035,.04,.065,.29,.02,'#e1c98c');}
         else{box(face,.3,.36,.025,0,.57,.016,'#735e45');box(face,.23,.28,.03,0,.57,.035,'#f2d292');box(face,.025,.28,.035,0,.57,.055,'#957b50');box(face,.23,.025,.035,0,.57,.055,'#957b50');}
         // Brackets under cantilevered rooms, leaving walkable space below.
         if(y>0&&!blocks[key(x,y-1,z)]){const brace=box(face,.07,.48,.07,dx?-.29:.29,-.13,-.12,'#8a7050');brace.rotation.x=-.65;}
+      }
+      // Short entrance stairs occupy only free frontage and rebuild with terrain.
+      if(y===0&&!blocks[key(x,0,z+1)]&&!water[waterKey(x,z+1)]&&z<LIMIT){
+        const steps=wetBase?3:1;
+        for(let i=0;i<steps;i++){
+          const h=(steps-i)*(wetBase?.085:.065);
+          box(buildings,.4,h,.12,x,h/2,z+.56+i*.11,'#afa68a');
+        }
       }
       if(!blocks[key(x,y+1,z)])roof(buildings,x,y,z,roofs[b.roof]);
       const axis=archAxis(blocks,x,y,z);if(axis)arch(buildings,x,y,z,axis,'#b5ad89');

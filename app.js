@@ -56,7 +56,7 @@ let blocks=state.blocks,peak=state.peak,history=[],tool='house',pointerDown=null
 const buildings=new THREE.Group();scene.add(buildings);
 const villagers=createVillagers(scene,material);
 let targets=[];
-const milestones=[{n:3,name:'The first neighbors',text:'Villagers have found their way to Stillwater.'},{n:6,name:'A lighter touch',text:'Silver birch timber unlocked.'},{n:9,name:'Earth & ember',text:'Terracotta roofs unlocked.'},{n:12,name:'A town of your own',text:'Red cedar and river slate unlocked.'}];
+const milestones=[{n:3,name:'The first neighbors',text:'Villagers have found their way to Stillwater.'},{n:6,name:'A lighter touch',text:'Silver birch timber unlocked.'},{n:9,name:'Earth & ember',text:'Rust red roof color unlocked.'},{n:12,name:'A town of your own',text:'Red cedar timber and slate blue roof color unlocked.'}];
 function notify(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(notify.timer);notify.timer=setTimeout(()=>$('#toast').classList.remove('show'),4200);}
 function save(){try{localStorage.setItem('mosswood-v2',JSON.stringify({blocks,water,peak}));}catch{notify('Autosave unavailable. Keep this tab open to preserve your town.');}}
 function updateUI(){const n=cottageCount(blocks);peak=Math.max(peak,n);const next=milestones.find(m=>peak<m.n);$('#population').textContent=`${peak>=3?n*2:0} villagers`;$('#next-title').textContent=next?.name||'Room to keep growing';$('#progress-number').textContent=next?`${n} / ${next.n}`:`${n} cottages`;$('#progress').style.width=`${next?Math.min(100,n/next.n*100):100}%`;$('#next-description').textContent=next?`Grow to ${next.n} cottage plots to make your next discovery.`:'All discoveries unlocked. Make this clearing your own.';$('#discovery-count').textContent=`${milestones.filter(m=>peak>=m.n).length} / 4`;$('#journal').innerHTML=milestones.map(m=>`<div>${peak>=m.n?'✦':'○'} ${m.n} cottages · ${m.name}</div>`).join('');for(const [id,values]of Object.entries({wood:{birch:6,cedar:12},roof:{clay:9,slate:12}}))for(const option of $(`#${id}`).options)if(values[option.value])option.disabled=peak<values[option.value];$('#undo').disabled=!history.length;}
@@ -65,10 +65,63 @@ const invisible=new THREE.MeshBasicMaterial({visible:false});
 const timber={oak:'#c6a171',birch:'#ded4b3',cedar:'#b77d61'};
 const roofs={moss:'#718a58',clay:'#b87755',slate:'#718b94'};
 let roofForms=new Map(),architecture=new Map();
+// Surface details follow each roof triangle, including hips and shared ridges.
+const roofMaterials=new Map();
+function roofingMaterial(color,tier){
+  const id=`${color}:${tier}`;
+  if(!roofMaterials.has(id)){
+    const tint=new THREE.Color(color);
+    if(tier!=='cottage')tint.lerp(new THREE.Color(tier==='estate'?'#92a4a6':'#86877b'),.25);
+    roofMaterials.set(id,new THREE.MeshStandardMaterial({color:tint,roughness:tier==='estate'?.34:tier==='lodge'?.73:1,metalness:tier==='estate'?.72:tier==='lodge'?.4:0,side:THREE.DoubleSide}));
+  }
+  return roofMaterials.get(id);
+}
+function roofDetails(parent,vertices,tier,color){
+  const metal=tier!=='cottage';
+  for(let i=0;i<vertices.length;i+=9){
+    const a=new THREE.Vector3(...vertices.slice(i,i+3)),b=new THREE.Vector3(...vertices.slice(i+3,i+6)),c=new THREE.Vector3(...vertices.slice(i+6,i+9));
+    const normal=new THREE.Vector3().crossVectors(b.clone().sub(a),c.clone().sub(a)).normalize();
+    if(normal.y<.1)continue; // Gable walls remain clear of roofing details.
+    if(!metal){
+      // Low, irregular clumps give living moss thickness without hiding the roof.
+      for(let j=0;j<7;j++){
+        const u=(j*.381966+.13)%1,v=((j*.618034+.27)%1)*(1-u);
+        const point=a.clone().multiplyScalar(1-u-v).addScaledVector(b,u).addScaledVector(c,v);
+        const moss=new THREE.Mesh(new THREE.IcosahedronGeometry(.065+(j%3)*.013,0),material(new THREE.Color('#718a58').multiplyScalar(.88+(j%3)*.09).getStyle()));
+        moss.scale.set(1,.45,1);moss.position.copy(point).addScaledVector(normal,.018);moss.castShadow=true;parent.add(moss);
+      }
+      continue;
+    }
+    // Clip parallel raised seams to the actual sloped face, never across gaps.
+    const axis=Math.abs(normal.x)>Math.abs(normal.z)?'z':'x';
+    const step=tier==='estate'?.22:.13;
+    const lo=Math.min(a[axis],b[axis],c[axis]),hi=Math.max(a[axis],b[axis],c[axis]);
+    for(let at=Math.ceil((lo+1e-6)/step)*step;at<hi-1e-6;at+=step){
+      const hits=[];
+      for(const [p,q]of [[a,b],[b,c],[c,a]]){
+        if(Math.abs(q[axis]-p[axis])<1e-8)continue;
+        const t=(at-p[axis])/(q[axis]-p[axis]);
+        if(t>=0&&t<=1){const hit=p.clone().lerp(q,t);if(!hits.some(h=>h.distanceToSquared(hit)<1e-10))hits.push(hit);}
+      }
+      if(hits.length!==2)continue;
+      const [p,q]=hits,length=p.distanceTo(q);if(length<.001)continue;
+      const seam=new THREE.Mesh(new THREE.BoxGeometry(tier==='estate'?.018:.022,length,tier==='estate'?.035:.014),roofingMaterial(color,tier));
+      seam.position.copy(p).add(q).multiplyScalar(.5).addScaledVector(normal,.017);
+      const along=q.clone().sub(p).normalize();
+      const across=new THREE.Vector3().crossVectors(along,normal).normalize();
+      seam.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(across,along,normal));seam.castShadow=true;parent.add(seam);
+      if(tier==='lodge'&&length>.18){
+        const nail=new THREE.Mesh(new THREE.SphereGeometry(.015,4,3),material('#655e50'));
+        nail.position.copy(p).lerp(q,.2).addScaledVector(normal,.03);parent.add(nail);
+      }
+    }
+  }
+}
 function roof(parent,x,y,z,color){
   const form=roofForms.get(key(x,y,z));if(!form)return;
   const top=y+1;
-  const estate=architecture.get(key(x,y,z))?.tier==='estate';
+  const tier=architecture.get(key(x,y,z))?.tier||'cottage';
+  const estate=tier==='estate';
   const rise=estate?1.35:1;
   if(form.kind==='terrace'){
     const deck=box(parent,1,.08,1,x,top+.04,z,'#bba47d');
@@ -105,11 +158,15 @@ function roof(parent,x,y,z,color){
     }
   }
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();
-  const roofMaterial=material(color);roofMaterial.side=THREE.DoubleSide;
+  const roofMaterial=roofingMaterial(color,tier);
+  roofDetails(parent,vertices,tier,color);
   const m=new THREE.Mesh(geometry,roofMaterial);m.castShadow=true;m.receiveShadow=true;m.userData={position:[x,y,z],normal:[0,1,0]};parent.add(m);targets.push(m);
   if(form.kind==='gable'){
     const cross=form.axis==='x'?z:x;
-    if(form.ridge>=cross-.5&&form.ridge<cross+.5)box(parent,form.axis==='x'?1.02:.07,.07,form.axis==='z'?1.02:.07,form.axis==='x'?x:form.ridge,top+form.height*rise,form.axis==='z'?z:form.ridge,color);
+    if(form.ridge>=cross-.5&&form.ridge<cross+.5){
+      const cap=box(parent,form.axis==='x'?1.02:.07,.07,form.axis==='z'?1.02:.07,form.axis==='x'?x:form.ridge,top+form.height*rise,form.axis==='z'?z:form.ridge,color);
+      cap.material=roofingMaterial(color,tier);
+    }
   }
   if(estate&&form.anchor===key(x,y,z)){
     // A capped stone chimney gives larger roof silhouettes a distinct finish.

@@ -93,3 +93,11 @@ steeper roofs, and capped chimneys. Timber and roofing selections still apply.
 Terraces and shared roof ridges continue to follow the footprint. Removing rooms,
 undoing, and loading a saved town recalculate the style automatically. Balconies
 connect walkable spaces without merging separate architectural styles.
+
+Roof finishes evolve with the same architecture stages: cottages use softly
+clumped moss; log cabins use weathered ribbed metal with exposed fasteners;
+estates use wider standing-seam panels with raised seams and a smoother metallic
+finish. Roof color remains selectable. Details follow sloped faces, including
+hip roofs and joined gables, while terraces remain usable timber decks.
+
+The roof menu selects Forest green, Rust red (9 cottages), or Slate blue (12 cottages). Cottage moss remains green over the selected roof color; growing buildings retain that color as roofing becomes metal. Existing saved roof selections carry over without migration.

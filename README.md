@@ -28,7 +28,7 @@ Left-click builds; a short right-click removes a block. Left/right drags do not 
 
 Click the Stillwater logo at the bottom (or press B) to open or close the animated building dock. It starts collapsed. Choose tools, timber colors, and roof materials inside. The **Tasks** button reveals progress and discoveries inside the dock; tasks start hidden and hide again when you close the dock. **How to play** contains the building and camera instructions. Escape closes the dock and returns keyboard focus to the logo. Hidden controls cannot receive keyboard focus, and reduced-motion preferences disable animations.
 
-Your selected tool and materials stay active while the dock is collapsed; 1–5 and undo shortcuts work during play.
+Your selected tool and materials stay active while the dock is collapsed; 1–6 and undo shortcuts work during play.
 
 ## Build a town
 
@@ -45,15 +45,32 @@ Discoveries are earned from distinct cottage plots: villagers at 3, birch at 6, 
 
 Towns autosave in browser local storage (`mosswood-v2`); this existing key is intentionally retained so the Stillwater rebrand preserves your saved village. The first launch imports a previous `mosswood-v1` town, including floors and materials, without deleting the old save. Storage is specific to your browser and site address.
 
+## Streams, rivers, and lakes
+
+Choose **Water (6)** in the building dock, then select **Stream**, **River**, or **Lake**. Each click adds one grid tile: streams form narrow connected channels, rivers are wider, and lake tiles fill out an open surface. Different water types join at shared edges; diagonal corners remain separate bodies. Click an existing water tile to change its type.
+
+Water is a separate saved terrain layer. Add it before building or beneath existing cottages and paths. Cottages over water gain timber stilts; paths become planked footbridges. Trees require dry ground and must be removed before painting water beneath them. Villagers avoid open water and can walk on footbridges.
+
+Each connected water body gains detail at these sizes:
+
+- **1–3 tiles:** gentle animated ripples.
+- **4+ tiles:** shoreline pebbles.
+- **10+ tiles:** larger boulders.
+- **18+ tiles:** shoreline reeds and occasional lily pads on lakes.
+
+Decorations are automatic and avoid occupied tiles. Splitting or shrinking a body recalculates its detail level. This is a creative water-painting system; water does not simulate flooding or gravity.
+
+With Water selected, **right-click removes water only**, including beneath buildings. With other tools selected, right-click removes the clicked building or exposed water. Removing a building leaves its water underneath. Undo restores both terrain and buildings together. Existing saved villages load with an empty water layer.
+
 ## Validation
 
-`npm run check` checks JavaScript syntax. `npm test` exercises save migration, supported outward placement, balcony conversion, arch detection, bounds, and removal of disconnected components. Browser validation also covers actual roof/wall clicks, camera gestures, undo, and reload persistence.
+`npm run check` checks JavaScript syntax. `npm test` exercises save migration, supported outward placement, balcony conversion, arch detection, bounds, and removal of disconnected components. Water tests cover connected bodies, detail thresholds, terrain/building independence, persistence normalization, and invalid edits. Browser validation also covers actual roof/wall clicks, camera gestures, undo, and reload persistence.
 
 ## Publish with GitHub Pages
 
-In GitHub **Settings → Pages**, choose **Deploy from a branch**, **main**, and **/ (root)**, then Save. The game is available at https://grs1819.github.io/Astra/ after deployment.
+In GitHub **Settings → Pages**, choose **Deploy from a branch**, **main**, and **/ (root)**, then Save. The game is available at https://grs1819.github.io/Stillwater/ after deployment.
 
-Publish `index.html`, `style.css`, `app.js`, `town.js`, and the complete `vendor/` and `assets/` directories. The Node server is only needed for local development. No secrets or build configuration are required. Desktop browsers with WebGL2 support are required; touch gestures are available but mobile layouts are not yet optimized.
+Publish `index.html`, `style.css`, `app.js`, `town.js`, `water.js`, `water-view.js`, and the complete `vendor/` and `assets/` directories. The Node server is only needed for local development. No secrets or build configuration are required. Desktop browsers with WebGL2 support are required; touch gestures are available but mobile layouts are not yet optimized.
 
 ## Brand assets
 

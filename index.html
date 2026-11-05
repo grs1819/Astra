@@ -46,14 +46,21 @@
                 <button class="tool" data-tool="path" aria-pressed="false"><span>▦</span>Path <kbd>2</kbd></button>
                 <button class="tool" data-tool="tree" aria-pressed="false"><span>♠</span>Tree <kbd>3</kbd></button>
                 <button class="tool" data-tool="balcony" aria-pressed="false"><span>☷</span>Balcony <kbd>5</kbd></button>
+                <button class="tool" data-tool="water" aria-pressed="false"><span>≈</span>Water <kbd>6</kbd></button>
                 <button class="tool" data-tool="erase" aria-pressed="false"><span>⌫</span>Remove <kbd>4</kbd></button>
               </div>
             </div>
-            <div class="material-group">
+            <div id="building-materials" class="material-group">
               <label for="wood">TIMBER</label>
               <select id="wood"><option value="oak">Honey oak</option><option value="birch" disabled>Silver birch · 6 cottages</option><option value="cedar" disabled>Red cedar · 12 cottages</option></select>
               <label for="roof">ROOF</label>
               <select id="roof"><option value="moss">Living moss</option><option value="clay" disabled>Terracotta · 9 cottages</option><option value="slate" disabled>River slate · 12 cottages</option></select>
+            </div>
+            <div id="water-options" class="water-options" hidden>
+              <label for="water-kind">SHAPE YOUR WATER</label>
+              <select id="water-kind"><option value="stream">Stream · narrow & winding</option><option value="river">River · wide & flowing</option><option value="lake">Lake · open & tranquil</option></select>
+              <p id="water-status" role="status">Click the grid to grow a waterway.</p>
+              <p class="water-growth">4 tiles: pebbles · 10: boulders · 18: plants</p>
             </div>
           </div>
           <div class="dock-bottom">
@@ -61,7 +68,8 @@
               <p><strong>Build:</strong> click roofs to grow up, walls to grow out. Alt-click to repaint. Right-click to remove.</p>
               <p><strong>Explore:</strong> middle-drag to orbit and tilt, Shift + middle-drag to pan, scroll to zoom. Q / E rotate; R recenters.</p>
               <p><strong>Connect:</strong> bridge two upper walls for an archway. Choose Balcony, then click an upper wall.</p>
-              <p><strong>Shortcuts:</strong> 1–5 choose tools; B opens the menu; Escape closes it; Ctrl / Cmd + Z undoes.</p>
+              <p><strong>Water:</strong> select Water (6), then Stream, River, or Lake. Click ground to add tiles; connected bodies gain detail as they grow. Cottages stand on stilts and paths become footbridges. Water can also be added beneath existing cottages and paths. With Water selected, right-click removes water only. Remove trees before adding water.</p>
+              <p><strong>Shortcuts:</strong> 1–6 choose tools; B opens the menu; Escape closes it; Ctrl / Cmd + Z undoes.</p>
             </div></details>
             <button id="undo" class="secondary" disabled>↶ Undo</button>
           </div>

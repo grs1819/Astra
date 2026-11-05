@@ -1,7 +1,7 @@
 import http from 'node:http';
 import {readFile} from 'node:fs/promises';
 const files = {
-  '/':'index.html', '/app.js':'app.js', '/style.css':'style.css', '/town.js':'town.js',
+  '/':'index.html', '/app.js':'app.js', '/style.css':'style.css', '/town.js':'town.js', '/water.js':'water.js', '/water-view.js':'water-view.js',
   '/vendor/three.module.js':'vendor/three.module.js',
   '/vendor/three.core.js':'vendor/three.core.js',
   '/vendor/OrbitControls.js':'vendor/OrbitControls.js',

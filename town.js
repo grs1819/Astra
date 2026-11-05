@@ -1,3 +1,4 @@
+import {normalizeWater,waterKey} from './water.js';
 export const LIMIT = 9;
 export const MAX_HEIGHT = 8;
 export const key = (x, y, z) => `${x},${y},${z}`;
@@ -17,9 +18,10 @@ export function normalize(data, legacy=false) {
       blocks[key(x,y+i,z)]={type:b.type,wood:['oak','birch','cedar'].includes(b.wood)?b.wood:'oak',roof:['moss','clay','slate'].includes(b.roof)?b.roof:'moss'};
     }
   }
-  return {blocks,peak:Math.max(Number.isFinite(data?.peak)?data.peak:0,cottageCount(blocks))};
+  return {blocks,water:normalizeWater(data?.water,LIMIT),peak:Math.max(Number.isFinite(data?.peak)?data.peak:0,cottageCount(blocks))};
 }
-export function canPlace(blocks,x,y,z,type) {
+export function canPlace(blocks,x,y,z,type,water={}) {
+  if(type==='tree'&&water[waterKey(x,z)])return false;
   if(!inside(x,y,z)) return false;
   const existing=blocks[key(x,y,z)];
   if(existing && !(type==='house' && existing.type==='balcony')) return false;

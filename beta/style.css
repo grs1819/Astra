@@ -80,3 +80,6 @@ select{border:1px solid #dce2d2;background:#f9f9f0;padding:9px;border-radius:7px
 .tasks-panel{padding:12px;gap:15px;margin-bottom:12px}.progress-title{font-size:11px;margin-top:8px}.progress-card p{font-size:10px}#journal{font-size:10px}
 .dock-launcher{margin-top:8px;gap:4px}.logo-toggle{width:62px;height:56px;border-radius:18px;padding:5px 10px 11px}.logo-toggle img{width:40px;height:40px}.dock-caption{font-size:9px}
 @media(max-width:600px){.dock-panel{padding:11px 12px}.palette{flex-direction:column;gap:9px;align-items:stretch}.tools{gap:4px}.tool{min-width:0;min-height:44px}.material-group{border-left:0;border-top:1px solid #dee3d5;padding:9px 0 0;grid-template-columns:36px 1fr 32px 1fr;gap:6px}.material-group select{width:100%;min-width:0}.water-options{width:100%;border-left:0;border-top:1px solid #dee3d5;padding:9px 0 0;display:grid;grid-template-columns:1fr 1fr;align-items:center}.water-options select{width:100%}.water-options p{grid-column:1/-1}.water-options .water-growth{display:none}.dock-heading h2{font-size:12px}.logo-toggle img{width:40px;height:40px}}
+
+.tools{flex-wrap:wrap}.tool-group{min-width:210px}.palette{flex-wrap:wrap}#role-options{max-width:100%}
+@media(max-width:600px){.tool-group{width:100%;min-width:0}.tools{display:grid;grid-template-columns:repeat(4,1fr)}}

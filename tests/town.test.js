@@ -56,3 +56,25 @@ test('balconies do not merge separate buildings into one estate',async()=>{
   const plan=architecturePlan(b);
   assert.equal(plan.get('0,0,0').rooms,1);assert.equal(plan.get('2,0,0').rooms,1);
 });
+
+test('roles apply to connected houses and survive loading without leaking to neighbors',async()=>{
+ const {assignRole}=await import('../town.js');
+ const b={'0,0,0':house,'0,1,0':house,'3,0,0':house};
+ const assigned=assignRole(b,'0,1,0','fishing');
+ assert.equal(assigned['0,0,0'].role,'fishing');assert.equal(assigned['3,0,0'].role,undefined);assert.equal(b['0,0,0'].role,undefined);
+ assert.equal(normalize({blocks:assigned}).blocks['0,1,0'].role,'fishing');
+ assert.equal(assignRole(assigned,'0,0,0','home')['0,1,0'].role,undefined);
+ assert.equal(assignRole(b,'0,0,0','invalid'),null);
+});
+test('camps upgrade twice, preserve stages, and require dry ground',async()=>{
+ const {upgradeCamp}=await import('../town.js');
+ let b={'0,0,0':{type:'camp',stage:1}};
+ b=upgradeCamp(b,'0,0,0');assert.equal(b['0,0,0'].stage,2);
+ b=upgradeCamp(b,'0,0,0');assert.equal(b['0,0,0'].stage,3);
+ assert.equal(upgradeCamp(b,'0,0,0'),null);
+ assert.equal(normalize({blocks:b}).blocks['0,0,0'].stage,3);
+ assert.equal(canPlace({},0,0,0,'camp',{'0,0':'lake'}),false);
+ assert.equal(canPlace({'0,0,0':house},0,1,0,'camp'),false);
+ assert.equal(canPlace({},0,0,0,'camp'),true);
+ const {waterEdit}=await import('../water.js');assert.equal(waterEdit({},b,0,0,'lake'),null);
+});

@@ -48,6 +48,8 @@
                 <button class="tool" data-tool="erase" aria-pressed="false"><span>⌫</span>Remove <kbd>4</kbd></button>
                 <button class="tool" data-tool="balcony" aria-pressed="false"><span>☷</span>Balcony <kbd>5</kbd></button>
                 <button class="tool" data-tool="water" aria-pressed="false"><span>≈</span>Water <kbd>6</kbd></button>
+              <button class="tool" data-tool="camp" aria-pressed="false"><span>△</span>Camp <kbd>7</kbd></button>
+                <button class="tool" data-tool="role" aria-pressed="false"><span>⚑</span>Role <kbd>8</kbd></button>
               </div>
             </div>
             <div id="building-materials" class="material-group">
@@ -55,6 +57,11 @@
               <select id="wood"><option value="oak">Honey oak</option><option value="birch" disabled>Silver birch · 6 cottages</option><option value="cedar" disabled>Red cedar · 12 cottages</option></select>
               <label for="roof">COLOR</label>
               <select id="roof" aria-label="Roof color"><option value="moss">Forest green</option><option value="clay" disabled>Rust red · 9 cottages</option><option value="slate" disabled>Slate blue · 12 cottages</option></select>
+            </div>
+            <div id="role-options" class="water-options" hidden>
+              <label for="building-role">BUILDING PURPOSE</label>
+              <select id="building-role"><option value="home">Home</option><option value="fishing">Fishing hut</option><option value="supply">Outdoor supply shop</option><option value="cafe">Bakery &amp; café</option><option value="inn">Inn &amp; lodge</option><option value="workshop">Carpenter’s workshop</option><option value="boathouse">Boathouse</option></select>
+              <p>Choose a role, then click a building. All connected rooms share its purpose. Residents visit reachable entrances; waterfront roles also attract visits to nearby banks.</p>
             </div>
             <div id="water-options" class="water-options" hidden>
               <label for="water-kind">SHAPE YOUR WATER</label>
@@ -65,6 +72,7 @@
           </div>
           <div class="dock-bottom">
             <details class="help"><summary>How to play</summary><div class="help-content">
+              <p><strong>Camping:</strong> select Camp (7) and click dry ground for a lean-to. Click it again for a tent, then a glamping shelter. Role (8) assigns a purpose to existing buildings. Right-click removes; Undo restores.</p>
               <p><strong>Build:</strong> click roofs to grow up, walls to grow out. Alt-click to repaint. Right-click to remove.</p>
               <p><strong>Explore:</strong> middle-drag to orbit and tilt, Shift + middle-drag to pan, scroll to zoom. Q / E rotate; R recenters.</p>
               <p><strong>Roofing:</strong> choose a roof color. Cottages have natural moss over a colored roof; log cabins gain weathered ribbed metal; estates gain polished standing-seam panels. Two stories or three rooms create a log cabin; four stories or ten rooms create an estate.</p>

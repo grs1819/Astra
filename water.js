@@ -36,6 +36,6 @@ export function waterEdit(water,blocks,x,z,type,limit=9){
   if(!Number.isInteger(x)||!Number.isInteger(z)||Math.abs(x)>limit||Math.abs(z)>limit)return null;
   const k=waterKey(x,z);
   if(type===null){if(!water[k])return null;const next={...water};delete next[k];return next;}
-  if(!Object.hasOwn(WATER_TYPES,type)||blocks[`${x},0,${z}`]?.type==='tree'||water[k]===type)return null;
+  if(!Object.hasOwn(WATER_TYPES,type)||['tree','camp'].includes(blocks[`${x},0,${z}`]?.type)||water[k]===type)return null;
   return {...water,[k]:type};
 }

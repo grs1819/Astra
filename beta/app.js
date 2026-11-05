@@ -3,7 +3,7 @@ import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
 import {createWaterView} from './water-view.js';
 import {createVillagers} from './villagers.js';
-import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp, campsitePlan} from './town.js';
+import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp, campsitePlan, lookoutPlan} from './town.js';
 
 const $=s=>document.querySelector(s);
 const canvas=$('#world');
@@ -64,7 +64,7 @@ const ghost=new THREE.Mesh(new THREE.BoxGeometry(1.01,.96,1.01),new THREE.MeshBa
 const invisible=new THREE.MeshBasicMaterial({visible:false});
 const timber={oak:'#c6a171',birch:'#ded4b3',cedar:'#b77d61'};
 const roofs={moss:'#718a58',clay:'#b87755',slate:'#718b94'};
-let roofForms=new Map(),architecture=new Map();
+let roofForms=new Map(),architecture=new Map(),lookouts=new Set();
 // Surface details follow each roof triangle, including hips and shared ridges.
 const roofMaterials=new Map();
 function roofingMaterial(color,tier){
@@ -168,7 +168,7 @@ function roof(parent,x,y,z,color){
       cap.material=roofingMaterial(color,tier);
     }
   }
-  if(estate&&form.anchor===key(x,y,z)){
+  if(estate&&!lookouts.has(key(x,y,z))&&form.anchor===key(x,y,z)){
     // A capped stone chimney gives larger roof silhouettes a distinct finish.
     box(parent,.16,.6,.18,x+.24,top+.42,z+.16,'#afa78f');
     box(parent,.22,.07,.24,x+.24,top+.75,z+.16,'#d9d0b5');
@@ -186,6 +186,41 @@ function arch(parent,x,y,z,axis,color){
   shape.lineTo(-.5,1);
   const geo=new THREE.ExtrudeGeometry(shape,{depth:.9,bevelEnabled:false});geo.translate(0,0,-.45);if(axis==='z')geo.rotateY(Math.PI/2);
   const m=new THREE.Mesh(geo,material(color));m.position.set(x,y-1,z);m.castShadow=true;parent.add(m);
+}
+const lookoutGlass=new THREE.MeshStandardMaterial({color:'#c5e5df',transparent:true,opacity:.14,roughness:.18,metalness:.12,depthWrite:false,side:THREE.DoubleSide});
+function lookoutRoom(parent,x,y,z,b){
+  const g=new THREE.Group();g.name='lookout-room';g.position.set(x,y,z);parent.add(g);
+  box(g,1,.09,1,0,.045,0,'#c3a078');
+  for(let i=-2;i<=2;i++)box(g,.012,.008,.98,i*.19,.094,0,'#957750');
+  box(g,1.08,.09,1.08,0,.955,0,timber[b.wood]);
+  for(const [dx,,dz]of directions){
+    if(lookouts.has(key(x+dx,y,z+dz)))continue;
+    const face=new THREE.Group();face.position.set(dx*.49,0,dz*.49);face.rotation.y=dx?Math.PI/2:0;g.add(face);
+    box(face,1,.12,.055,0,.15,0,timber[b.wood]);
+    for(const xx of [-.47,.47])box(face,.045,.76,.065,xx,.55,0,'#765b40');
+    const pane=new THREE.Mesh(new THREE.PlaneGeometry(.88,.69),lookoutGlass);pane.position.y=.555;face.add(pane);
+  }
+  function rod(a,b,r,color){
+    const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),delta=end.clone().sub(start);
+    const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(color));mesh.position.copy(start).add(end).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());mesh.castShadow=true;g.add(mesh);return mesh;
+  }
+  // Brass telescope on a timber tripod, aimed out of a panoramic window.
+  for(const foot of [[-.34,.1,.33],[.02,.1,.35],[-.15,.1,-.01]])rod(foot,[-.16,.49,.19],.014,'#826141');
+  rod([-.16,.48,.05],[-.16,.62,.4],.052,'#c49b59');
+  rod([-.16,.61,.37],[-.16,.63,.43],.061,'#465859');
+  rod([-.16,.47,.02],[-.16,.48,.06],.024,'#4f5148');
+  // Cast-iron stove, glowing door, hearth, and a flue through the roof.
+  box(g,.3,.025,.3,.27,.11,-.25,'#898575');
+  box(g,.2,.27,.2,.27,.265,-.25,'#414644');
+  box(g,.125,.12,.015,.27,.27,-.142,'#d8964e');
+  box(g,.14,.02,.02,.27,.2,-.13,'#292f2d');
+  rod([.27,.39,-.25],[.27,1.65,-.25],.032,'#4d5553');
+  box(g,.13,.035,.13,.27,1.66,-.25,'#434b48');
+  for(const xx of [.2,.34])box(g,.035,.07,.035,xx,.14,-.25,'#414644');
+  // A low map table leaves the sightline to the telescope clear.
+  box(g,.3,.04,.2,-.25,.31,-.28,'#9e774d');
+  for(const xx of [-.36,-.14])box(g,.025,.19,.13,xx,.2,-.28,'#795d40');
+  box(g,.22,.006,.14,-.25,.335,-.28,'#e4d7b2');
 }
 const roleLabels={fishing:'FISHING',supply:'OUTFITTER',cafe:'BAKERY',inn:'LODGE',workshop:'WOODWORK',boathouse:'BOATHOUSE'};
 const signMaterials=new Map();
@@ -301,6 +336,7 @@ function rebuild(){
   waterAnalysis=waterView.rebuild(water,blocks);
   roofForms=roofPlan(blocks);
   architecture=architecturePlan(blocks);
+  lookouts=lookoutPlan(blocks);
   const camps=campsitePlan(blocks);
   const roleFronts=new Map();
   // One entrance treatment per connected building, preferring the front (+Z).
@@ -347,13 +383,15 @@ function rebuild(){
     if(b.type==='house'){
       const wetBase=y===0&&!!water[waterKey(x,z)],base=wetBase?.26:0;
       const tier=architecture.get(k).tier,estate=tier==='estate',lodge=tier==='lodge';
-      const wall=estate?(y===0?'#b6ad94':'#e0d4b7'):timber[b.wood];box(buildings,1,1-base,1,x,y+base+(1-base)/2,z,wall);
+      const lookout=lookouts.has(k);
+      if(lookout)lookoutRoom(buildings,x,y,z,b);
+      const wall=estate?(y===0?'#b6ad94':'#e0d4b7'):timber[b.wood];if(!lookout)box(buildings,1,1-base,1,x,y+base+(1-base)/2,z,wall);
       if(wetBase){
         for(const dx of [-.37,.37])for(const dz of [-.37,.37])box(buildings,.1,.28,.1,x+dx,.14,z+dz,'#817057');
         box(buildings,1.08,.08,1.08,x,.26,z,'#ac916a');
       }
       for(const [dx,,dz]of directions){
-        if(blocks[key(x+dx,y,z+dz)]?.type==='house')continue;
+        if(lookout||blocks[key(x+dx,y,z+dz)]?.type==='house')continue;
         const face=new THREE.Group();face.position.set(x+dx*.505,y+base,z+dz*.505);face.scale.y=1-base;face.rotation.y=dx?dx*Math.PI/2:dz===-1?Math.PI:0;buildings.add(face);
         if(lodge){
           for(let h=.1;h<1;h+=.16){

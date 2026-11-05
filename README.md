@@ -26,7 +26,7 @@ Left-click builds; a short right-click removes a block. Left/right drags do not 
 
 ## Building dock
 
-Click the Stillwater logo at the bottom (or press B) to open or close the animated building dock. It starts collapsed. Choose tools, timber colors, and roof materials inside. The **Tasks** button reveals progress and discoveries inside the dock; tasks start hidden and hide again when you close the dock. **How to play** contains the building and camera instructions. Escape closes the dock and returns keyboard focus to the logo. Hidden controls cannot receive keyboard focus, and reduced-motion preferences disable animations.
+Click the Stillwater logo at the bottom (or press B) to open or close the compact animated building dock. It starts collapsed. Choose tools, timber colors, and roof materials inside. The **Tasks** button reveals progress and discoveries inside the dock; tasks start hidden and hide again when you close the dock. **How to play** contains the building and camera instructions. Escape closes the dock and returns keyboard focus to the logo. Hidden controls cannot receive keyboard focus, and reduced-motion preferences disable animations.
 
 Your selected tool and materials stay active while the dock is collapsed; 1–6 and undo shortcuts work during play.
 
@@ -57,6 +57,8 @@ Each connected water body gains detail at these sizes:
 - **4+ tiles:** shoreline pebbles.
 - **10+ tiles:** larger boulders.
 - **18+ tiles:** shoreline reeds and occasional lily pads on lakes.
+
+The water surface has continuous animated ripples, sunlight highlights, pale shallow edges, and deeper color toward the center. Streams move faster than lakes. Surface motion pauses when your system requests reduced motion; lighting and shoreline color remain visible.
 
 Decorations are automatic and avoid occupied tiles. Splitting or shrinking a body recalculates its detail level. This is a creative water-painting system; water does not simulate flooding or gravity.
 

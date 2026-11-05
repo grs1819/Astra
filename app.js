@@ -11,9 +11,11 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.autoUpdate=false;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.setClearColor('#d5dfc7');
+renderer.setClearColor('#dce6d7');
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.12;
 const scene=new THREE.Scene();
-scene.fog=new THREE.Fog('#d5dfc7',36,85);
+scene.fog=new THREE.Fog('#dce6d7',38,85);
 const camera=new THREE.PerspectiveCamera(38,1,.1,140);
 const controls=new OrbitControls(camera,canvas);
 controls.enableDamping=true;
@@ -24,12 +26,12 @@ controls.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.ROTATE,RIGHT:null};
 controls.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};
 function recenter(){camera.position.set(19,20,25);controls.target.set(0,0,0);controls.update();}
 recenter();
-scene.add(new THREE.HemisphereLight('#fff8df','#748465',2));
-const sunlight=new THREE.DirectionalLight('#fff1d1',2);
+scene.add(new THREE.HemisphereLight('#dcecf1','#829273',1.65));
+const sunlight=new THREE.DirectionalLight('#fff0d6',2.7);
 sunlight.position.set(-12,25,12);sunlight.castShadow=true;
 sunlight.shadow.mapSize.set(2048,2048);
 Object.assign(sunlight.shadow.camera,{left:-23,right:23,top:23,bottom:-23,near:.1,far:65});
-sunlight.shadow.normalBias=.035;scene.add(sunlight);
+sunlight.shadow.normalBias=.025;sunlight.shadow.bias=-.00015;scene.add(sunlight);
 const materials=new Map();
 function material(color){if(!materials.has(color))materials.set(color,new THREE.MeshStandardMaterial({color,roughness:.94}));return materials.get(color);}
 function box(parent,w,h,d,x,y,z,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}

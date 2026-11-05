@@ -78,3 +78,14 @@ test('camps upgrade twice, preserve stages, and require dry ground',async()=>{
  assert.equal(canPlace({},0,0,0,'camp'),true);
  const {waterEdit}=await import('../water.js');assert.equal(waterEdit({},b,0,0,'lake'),null);
 });
+
+test('connected camps share one hub, furnish at four, and split on removal',async()=>{
+ const {campsitePlan,upgradeCamp}=await import('../town.js');
+ const c={type:'camp',stage:1},b={'0,0,0':c,'1,0,0':c,'2,0,0':c,'2,0,1':c,'4,0,0':c};
+ let plan=campsitePlan(b);assert.equal(plan.get('0,0,0').size,4);assert.equal(plan.get('0,0,0').stage,3);
+ assert.equal(plan.get('0,0,0'),plan.get('2,0,1'));assert.equal(plan.get('4,0,0').hub,null);
+ const reverse=Object.fromEntries(Object.entries(b).reverse());assert.equal(campsitePlan(reverse).get('0,0,0').hub,plan.get('0,0,0').hub);
+ assert.equal(upgradeCamp(b,'0,0,0'),null);
+ delete b['1,0,0'];plan=campsitePlan(b);assert.equal(plan.get('0,0,0').size,1);assert.equal(plan.get('2,0,0').size,2);assert.equal(plan.get('2,0,0').stage,2);
+ const upgraded=upgradeCamp(b,'2,0,1');assert.equal(upgraded['2,0,0'].stage,3);assert.equal(upgraded['0,0,0'].stage,1);
+});

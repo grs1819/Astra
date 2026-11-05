@@ -133,3 +133,12 @@ to upgrade to a tent, then a raised glamping shelter with bedding and a lantern.
 Camps welcome walkers before the cottage population unlock. Camps block movement
 through their occupied tile, cannot be flooded, and support Undo and autosave.
 Right-click removes a campsite. Upgrades remain on the same one-tile footprint.
+
+Adjacent campsite tiles now form a shared camp. Two connected tiles create one
+campfire gathering tile with a log seat and tent accommodation. Four create a
+stone firepit with chairs, table, and lantern, surrounded by glamping shelters.
+Ground pads join across occupied tiles; props stay inside the campsite footprint.
+Removing or reconnecting tiles recalculates groups, including irregular shapes.
+Clicking a connected camp upgrades its shelters together; automatic size upgrades
+remain reversible, while manual upgrades persist. Role buildings now display
+larger color-coded fascias, awnings, and projecting signs on exposed sides.

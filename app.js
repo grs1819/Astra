@@ -120,12 +120,38 @@ canvas.addEventListener('pointerup',e=>{if(pointerDown&&!pointerDown.moved&&poin
 canvas.addEventListener('pointercancel',()=>pointerDown=null);canvas.addEventListener('pointerleave',()=>ghost.visible=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 function selectTool(value){tool=value;document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>selectTool(b.dataset.tool));
-$('#undo').onclick=undo;$('#reset-view').onclick=recenter;$('#journal-toggle').onclick=()=>$('#journal').hidden=!$('#journal').hidden;
+$('#undo').onclick=undo;
+const dock=$('.dock'), dockMenu=$('#build-menu'), dockToggle=$('#dock-toggle');
+function setTasks(open){
+  $('#tasks-panel').hidden=!open;
+  $('#tasks-toggle').setAttribute('aria-expanded',String(open));
+}
+function setDock(open){
+  if(!open && dockMenu.contains(document.activeElement))dockToggle.focus();
+  dock.dataset.open=String(open);
+  dockMenu.inert=!open;
+  dockMenu.setAttribute('aria-hidden',String(!open));
+  dockToggle.setAttribute('aria-expanded',String(open));
+  dockToggle.setAttribute('aria-label',open?'Close building menu':'Open building menu');
+  dockToggle.title=(open?'Close':'Open')+' building menu (B)';
+  $('#dock-caption').innerHTML=open?'A little room to create':'Build your town <kbd>B</kbd>';
+  if(!open)setTasks(false);
+  // Restart the short logo bounce and water ripple on each toggle.
+  dockToggle.classList.remove('animating');
+  void dockToggle.offsetWidth;
+  dockToggle.classList.add('animating');
+}
+dockToggle.addEventListener('animationend',()=>dockToggle.classList.remove('animating'));
+dockToggle.onclick=()=>setDock(dock.dataset.open!=='true');
+$('#tasks-toggle').onclick=()=>setTasks($('#tasks-panel').hidden);
+addEventListener('keydown',e=>{
+  if(e.key==='Escape' && dock.dataset.open==='true'){e.preventDefault();setDock(false);return;}
+  if(['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName)||e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;
+  if(e.key.toLowerCase()==='b'){e.preventDefault();setDock(dock.dataset.open!=='true');}
+  if(e.key.toLowerCase()==='r')recenter();
+});
 function orbit(delta){const offset=camera.position.clone().sub(controls.target);offset.applyAxisAngle(new THREE.Vector3(0,1,0),delta);camera.position.copy(controls.target).add(offset);controls.update();}
-$('#rotate-left').onclick=()=>orbit(Math.PI/8);$('#rotate-right').onclick=()=>orbit(-Math.PI/8);
-$('#tilt').oninput=e=>{const offset=camera.position.clone().sub(controls.target);const s=new THREE.Spherical().setFromVector3(offset);s.phi=Number(e.target.value);camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(s));controls.update();};
-$('#zoom-in').onclick=()=>{camera.position.sub(controls.target).multiplyScalar(.85).add(controls.target);controls.update();};$('#zoom-out').onclick=()=>{camera.position.sub(controls.target).multiplyScalar(1.15).add(controls.target);controls.update();};
-controls.addEventListener('change',()=>{$('#tilt').value=controls.getPolarAngle();ghost.visible=false;});
+controls.addEventListener('change',()=>{ghost.visible=false;});
 addEventListener('keydown',e=>{if(['SELECT','INPUT'].includes(document.activeElement.tagName))return;if(['1','2','3','4','5'].includes(e.key))selectTool(['house','path','tree','erase','balcony'][Number(e.key)-1]);if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}if(e.key.toLowerCase()==='q')orbit(Math.PI/8);if(e.key.toLowerCase()==='e')orbit(-Math.PI/8);});
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);resize();
 updateUI();rebuild();save();

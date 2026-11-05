@@ -19,10 +19,16 @@ Open port 5173 in your browser. Use `PORT=8080 npm start` to choose another port
 - Hold the middle mouse button and drag to orbit horizontally and tilt vertically.
 - Hold Shift and middle-drag to pan.
 - Scroll the mouse wheel to zoom in or out.
-- Use the on-screen rotation buttons, tilt slider, and zoom buttons for precise control.
-- Q / E rotate; Recenter restores the original view.
+- Q / E rotate; R restores the original view.
+- Camera controls are mouse and keyboard only, keeping the scene clear.
 
 Left-click builds; a short right-click removes a block. Left/right drags do not move the camera or edit the town. Middle-clicking or dragging never edits the town.
+
+## Building dock
+
+Click the Stillwater logo at the bottom (or press B) to open or close the animated building dock. It starts collapsed. Choose tools, timber colors, and roof materials inside. The **Tasks** button reveals progress and discoveries inside the dock; tasks start hidden and hide again when you close the dock. **How to play** contains the building and camera instructions. Escape closes the dock and returns keyboard focus to the logo. Hidden controls cannot receive keyboard focus, and reduced-motion preferences disable animations.
+
+Your selected tool and materials stay active while the dock is collapsed; 1–5 and undo shortcuts work during play.
 
 ## Build a town
 

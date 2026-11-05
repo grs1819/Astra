@@ -1,8 +1,82 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stillwater — a little place to grow</title><meta name="description" content="Still water - a little place to grow. Build a peaceful forest village, one cottage at a time."><meta name="theme-color" content="#075337"><link rel="icon" type="image/png" href="./assets/stillwater-icon.png"><link rel="apple-touch-icon" href="./assets/stillwater-icon.png"><link rel="stylesheet" href="./style.css"></head>
-<body><canvas id="world" aria-label="Forest village. Click ground to build, roofs to grow up, and walls to grow outward."></canvas>
-<header><div class="brand"><img class="brand-mark" src="./assets/stillwater-mark.png" alt="" width="72" height="72"><div><h1>stillwater</h1><p>Still water - a little place to grow</p></div></div><div class="status"><span class="sun">☀</span> An endless afternoon <span class="divider">│</span> <span id="population">0 villagers</span></div></header>
-<aside><span class="eyebrow">YOUR CLEARING</span><h2>Make yourself<br>at home.</h2><p>A roof beneath the branches.<br>A path to a new neighbor.<br>Build a little, breathe a little.</p><div class="progress-card"><div class="progress-title"><span id="next-title">The first neighbors</span><span id="progress-number">0 / 3</span></div><div class="track"><div id="progress"></div></div><p id="next-description">Build 3 cottages to welcome villagers.</p></div><button id="journal-toggle" class="quiet">✧ &nbsp; Village discoveries <span id="discovery-count">0 / 4</span></button><div id="journal" hidden></div></aside>
-<div id="toast" role="status"></div>
-<nav class="camera-controls" aria-label="Camera controls"><span class="eyebrow">LOOK AROUND</span><div><button id="rotate-left" aria-label="Rotate camera left">↶</button><button id="rotate-right" aria-label="Rotate camera right">↷</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-in" aria-label="Zoom in">+</button></div><label for="tilt">TILT</label><input id="tilt" type="range" min="0.22" max="1.35" step="0.01" value="1" aria-label="Camera tilt"></nav>
-<footer><div class="palette"><div class="tool-group"><span class="eyebrow">MAKE A LITTLE</span><div class="tools"><button class="tool active" data-tool="house"><span>⌂</span>Cottage <kbd>1</kbd></button><button class="tool" data-tool="path"><span>▦</span>Path <kbd>2</kbd></button><button class="tool" data-tool="tree"><span>♠</span>Tree <kbd>3</kbd></button><button class="tool" data-tool="balcony"><span>☷</span>Balcony <kbd>5</kbd></button><button class="tool" data-tool="erase"><span>⌫</span>Remove <kbd>4</kbd></button></div></div><div class="material-group"><label for="wood">TIMBER</label><select id="wood"><option value="oak">Honey oak</option><option value="birch" disabled>Silver birch · 6 cottages</option><option value="cedar" disabled>Red cedar · 12 cottages</option></select><label for="roof">ROOF</label><select id="roof"><option value="moss">Living moss</option><option value="clay" disabled>Terracotta · 9 cottages</option><option value="slate" disabled>River slate · 12 cottages</option></select></div></div><div class="hint"><span>Click roofs to grow up · Walls to grow out · Alt-click to repaint</span><span>Middle-drag to orbit / tilt · Shift + middle-drag to pan · Scroll to zoom · <button id="reset-view">Recenter</button> · <button id="undo">Undo</button></span></div></footer><div class="building-tip">Bridge two upper walls for an archway.<br>Choose Balcony, then click an upper wall.<br>Right-click to remove a block; undo restores its extensions.</div><div class="corner">TAKE YOUR TIME. IT'S YOUR TOWN.</div><script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script><script type="module" src="./app.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stillwater — a little place to grow</title>
+  <meta name="description" content="Still water - a little place to grow. Build a peaceful forest village, one cottage at a time.">
+  <meta name="theme-color" content="#075337">
+  <link rel="icon" type="image/png" href="./assets/stillwater-icon.png">
+  <link rel="apple-touch-icon" href="./assets/stillwater-icon.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <canvas id="world" aria-label="Forest village. Click ground to build, roofs to grow up, and walls to grow outward."></canvas>
+  <header>
+    <div class="brand">
+      <img class="brand-mark" src="./assets/stillwater-mark.png" alt="" width="72" height="72">
+      <div><h1>stillwater</h1><p>Still water - a little place to grow</p></div>
+    </div>
+    <div class="status"><span class="sun">☀</span> An endless afternoon <span class="divider">│</span> <span id="population">0 villagers</span></div>
+  </header>
+  <div id="toast" role="status"></div>
+
+  <footer class="dock" data-open="false" aria-label="Building menu">
+    <div id="build-menu" class="dock-shell" inert aria-hidden="true">
+      <div class="dock-clip">
+        <div class="dock-panel">
+          <div class="dock-heading">
+            <div><span class="eyebrow">A LITTLE PLACE TO GROW</span><h2>Make yourself at home.</h2></div>
+            <button id="tasks-toggle" class="secondary" aria-expanded="false" aria-controls="tasks-panel">✧ <span>Tasks</span><span id="discovery-count">0 / 4</span></button>
+          </div>
+          <section id="tasks-panel" class="tasks-panel" aria-label="Village tasks and discoveries" hidden>
+            <div class="progress-card">
+              <span class="eyebrow">YOUR NEXT DISCOVERY</span>
+              <div class="progress-title"><span id="next-title">The first neighbors</span><span id="progress-number">0 / 3</span></div>
+              <div class="track"><div id="progress"></div></div>
+              <p id="next-description">Build 3 cottages to welcome villagers.</p>
+            </div>
+            <div class="discoveries"><span class="eyebrow">VILLAGE DISCOVERIES</span><div id="journal"></div></div>
+          </section>
+          <div class="palette">
+            <div class="tool-group">
+              <span class="eyebrow">MAKE A LITTLE</span>
+              <div class="tools" role="group" aria-label="Building tools">
+                <button class="tool active" data-tool="house" aria-pressed="true"><span>⌂</span>Cottage <kbd>1</kbd></button>
+                <button class="tool" data-tool="path" aria-pressed="false"><span>▦</span>Path <kbd>2</kbd></button>
+                <button class="tool" data-tool="tree" aria-pressed="false"><span>♠</span>Tree <kbd>3</kbd></button>
+                <button class="tool" data-tool="balcony" aria-pressed="false"><span>☷</span>Balcony <kbd>5</kbd></button>
+                <button class="tool" data-tool="erase" aria-pressed="false"><span>⌫</span>Remove <kbd>4</kbd></button>
+              </div>
+            </div>
+            <div class="material-group">
+              <label for="wood">TIMBER</label>
+              <select id="wood"><option value="oak">Honey oak</option><option value="birch" disabled>Silver birch · 6 cottages</option><option value="cedar" disabled>Red cedar · 12 cottages</option></select>
+              <label for="roof">ROOF</label>
+              <select id="roof"><option value="moss">Living moss</option><option value="clay" disabled>Terracotta · 9 cottages</option><option value="slate" disabled>River slate · 12 cottages</option></select>
+            </div>
+          </div>
+          <div class="dock-bottom">
+            <details class="help"><summary>How to play</summary><div class="help-content">
+              <p><strong>Build:</strong> click roofs to grow up, walls to grow out. Alt-click to repaint. Right-click to remove.</p>
+              <p><strong>Explore:</strong> middle-drag to orbit and tilt, Shift + middle-drag to pan, scroll to zoom. Q / E rotate; R recenters.</p>
+              <p><strong>Connect:</strong> bridge two upper walls for an archway. Choose Balcony, then click an upper wall.</p>
+              <p><strong>Shortcuts:</strong> 1–5 choose tools; B opens the menu; Escape closes it; Ctrl / Cmd + Z undoes.</p>
+            </div></details>
+            <button id="undo" class="secondary" disabled>↶ Undo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dock-launcher">
+      <button id="dock-toggle" class="logo-toggle" aria-expanded="false" aria-controls="build-menu" aria-label="Open building menu" title="Open building menu (B)">
+        <img src="./assets/stillwater-mark.png" alt="" width="48" height="48">
+        <span class="dock-chevron" aria-hidden="true"></span>
+      </button>
+      <span id="dock-caption" class="dock-caption">Build your town <kbd>B</kbd></span>
+    </div>
+  </footer>
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

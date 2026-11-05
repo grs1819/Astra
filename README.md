@@ -142,3 +142,5 @@ Removing or reconnecting tiles recalculates groups, including irregular shapes.
 Clicking a connected camp upgrades its shelters together; automatic size upgrades
 remain reversible, while manual upgrades persist. Role buildings now display
 larger color-coded fascias, awnings, and projecting signs on exposed sides.
+
+Connected camp shelters now merge into a continuous roof and deck across their actual footprint, with perimeter-only supports. The gathering area moves to a nearby empty dry tile outside the fabric; it hides if no space is available and relocates when that tile is built on. Role signage appears only on one exposed entrance side per connected building, preferring the front.

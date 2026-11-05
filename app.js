@@ -239,6 +239,33 @@ function camp(parent,x,z,stage){
   }
 }
 
+function joinedCamp(parent,x,z,group){
+  const coords=group.tiles.map(k=>k.split(',').map(Number));
+  const xs=coords.map(p=>p[0]),zs=coords.map(p=>p[2]);
+  const alongX=Math.max(...xs)-Math.min(...xs)>=Math.max(...zs)-Math.min(...zs);
+  const cross=alongX?zs:xs,lo=Math.min(...cross)-.5,hi=Math.max(...cross)+.5,ridge=(lo+hi)/2;
+  const stage=Math.max(group.stage,...group.tiles.map(k=>blocks[k].stage||1));
+  const floor=stage===3?.18:.055,eave=floor+.35,peak=eave+.6;
+  box(parent,1,floor,1,x,floor/2,z,stage===3?'#af9064':'#8d8063');
+  const c=alongX?z:x,a=alongX?x:z,cuts=[c-.5,...(ridge>c-.5&&ridge<c+.5?[ridge]:[]),c+.5];
+  const point=(along,t)=>alongX?[along,eave+(1-Math.abs(t-ridge)/((hi-lo)/2))*(peak-eave),t]:[t,eave+(1-Math.abs(t-ridge)/((hi-lo)/2))*(peak-eave),along];
+  const vertices=[];
+  for(let i=0;i<cuts.length-1;i++){
+    const p=point(a-.5,cuts[i]),q=point(a+.5,cuts[i]),r=point(a+.5,cuts[i+1]),t=point(a-.5,cuts[i+1]);vertices.push(...p,...q,...r,...p,...r,...t);
+  }
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();
+  const cloth=material(stage===3?'#e1d3b2':'#bf9960');cloth.side=THREE.DoubleSide;
+  const canopy=new THREE.Mesh(geometry,cloth);canopy.castShadow=true;canopy.receiveShadow=true;parent.add(canopy);
+  // Only perimeter edges get poles and rolled canvas. Interior rooms stay open.
+  for(const [dx,,dz]of directions){
+    if(group.tiles.includes(key(x+dx,0,z+dz)))continue;
+    const cx=x+dx*.48,cz=z+dz*.48;
+    const height=point(alongX?cx:cz,alongX?cz:cx)[1];
+    box(parent,.035,height,.035,cx,height/2,cz,'#806442');
+  }
+  box(parent,.24,.07,.53,x-.2,floor+.04,z,'#eee3c7');
+}
+
 function campGathering(parent,x,z,size){
   const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
   const fancy=size>=4;
@@ -275,15 +302,35 @@ function rebuild(){
   roofForms=roofPlan(blocks);
   architecture=architecturePlan(blocks);
   const camps=campsitePlan(blocks);
+  const roleFronts=new Map();
+  // One entrance treatment per connected building, preferring the front (+Z).
+  for(const [dx,dz]of [[0,1],[1,0],[-1,0],[0,-1]])for(const k of Object.keys(blocks).sort()){
+    const b=blocks[k],[x,y,z]=k.split(',').map(Number),form=architecture.get(k);
+    if(y!==0||b.type!=='house'||!b.role||b.role==='home'||roleFronts.has(form)||blocks[key(x+dx,0,z+dz)]?.type==='house')continue;
+    roleFronts.set(form,{k,dx,dz});
+  }
   for(const [k,b]of Object.entries(blocks)){
     const [x,y,z]=k.split(',').map(Number);
     if(b.type==='tree'){tree(buildings,x,z);}
     if(b.type==='camp'){
       const group=camps.get(k);
-      // Contiguous ground pads visually join the tents and gathering area.
-      if(group.size>=2)box(buildings,1,.035,1,x,.018,z,'#ad9c78');
-      if(group.hub===k)campGathering(buildings,x,z,group.size);
-      else camp(buildings,x,z,Math.max(b.stage||1,group.stage));
+      if(group.size===1)camp(buildings,x,z,b.stage||1);
+      else{
+        joinedCamp(buildings,x,z,group);
+        if(group.hub===k){
+          // Put the fire outside the fabric, only on an unoccupied dry tile.
+          let spot;
+          for(const id of group.tiles){
+            const [cx,,cz]=id.split(',').map(Number);
+            for(const [dx,dz]of [[0,1],[1,0],[-1,0],[0,-1]]){
+              const nx=cx+dx,nz=cz+dz;
+              if(Math.abs(nx)<=LIMIT&&Math.abs(nz)<=LIMIT&&!blocks[key(nx,0,nz)]&&!water[waterKey(nx,nz)]){spot=[nx,nz];break;}
+            }
+            if(spot)break;
+          }
+          if(spot)campGathering(buildings,...spot,group.size);
+        }
+      }
     }
     if(b.type==='path'){
       if(water[waterKey(x,z)]){
@@ -344,7 +391,8 @@ function rebuild(){
         // Brackets under cantilevered rooms, leaving walkable space below.
         if(y>0&&!blocks[key(x,y-1,z)]){const brace=box(face,.07,.48,.07,dx?-.29:.29,-.13,-.12,'#8a7050');brace.rotation.x=-.65;}
       }
-      if(y===0&&b.role&&b.role!=='home')for(const [dx,,dz]of directions)if(blocks[key(x+dx,0,z+dz)]?.type!=='house')roleDetails(buildings,x,z,b.role,base,dx,dz);
+      const front=roleFronts.get(architecture.get(k));
+      if(front?.k===k)roleDetails(buildings,x,z,b.role,base,front.dx,front.dz);
       // Short entrance stairs occupy only free frontage and rebuild with terrain.
       if(y===0&&!blocks[key(x,0,z+1)]&&!water[waterKey(x,z+1)]&&z<LIMIT){
         const steps=wetBase?3:1;

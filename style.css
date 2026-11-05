@@ -8,10 +8,12 @@ button,summary{cursor:pointer}
 button:disabled{opacity:.45;cursor:default}
 button:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--pine);outline-offset:4px}
 header{position:absolute;top:28px;left:36px;right:36px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;gap:20px}
-.brand{display:flex;align-items:center;gap:12px;color:var(--pine)}
-.brand-mark{display:block;width:72px;height:72px;object-fit:contain;flex-shrink:0}
-.brand h1{font-size:38px;font-weight:750;letter-spacing:-1.7px;line-height:1.08;margin:0}
-.brand p{font-size:11px;letter-spacing:.3px;color:#46684e;margin:7px 0 0}
+.brand{color:var(--pine);flex-shrink:0}
+.brand .brand-title{margin:0;line-height:0}
+.brand-logo{display:block;width:240px;height:auto}
+header{align-items:flex-start}
+@media(max-width:850px){.brand-logo{width:210px}}
+@media(max-width:600px){.brand-logo{width:clamp(140px,43vw,190px)}}
 .status{font-size:12px;background:#f8f6e8d9;border:1px solid #ffffff80;border-radius:30px;padding:14px 20px;box-shadow:0 4px 20px #3e5f3110;white-space:nowrap}
 .sun{color:#b88d43;font-size:18px;margin-right:8px}.divider{padding:0 12px;opacity:.3}
 .eyebrow,label{font-size:9px;font-weight:600;letter-spacing:1.8px;color:#6a7b61}

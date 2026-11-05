@@ -7,6 +7,7 @@ const files = {
   '/vendor/OrbitControls.js':'vendor/OrbitControls.js',
   '/assets/stillwater-mark.png':'assets/stillwater-mark.png',
   '/assets/stillwater-icon.png':'assets/stillwater-icon.png',
+  '/assets/stillwater-logo.png':'assets/stillwater-logo.png',
 };
 const contentTypes={js:'text/javascript',css:'text/css',html:'text/html',png:'image/png'};
 http.createServer(async(req,res)=>{

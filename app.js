@@ -3,7 +3,7 @@ import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
 import {createWaterView} from './water-view.js';
 import {createVillagers} from './villagers.js';
-import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan} from './town.js';
+import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan} from './town.js';
 
 const $=s=>document.querySelector(s);
 const canvas=$('#world');
@@ -64,10 +64,12 @@ const ghost=new THREE.Mesh(new THREE.BoxGeometry(1.01,.96,1.01),new THREE.MeshBa
 const invisible=new THREE.MeshBasicMaterial({visible:false});
 const timber={oak:'#c6a171',birch:'#ded4b3',cedar:'#b77d61'};
 const roofs={moss:'#718a58',clay:'#b87755',slate:'#718b94'};
-let roofForms=new Map();
+let roofForms=new Map(),architecture=new Map();
 function roof(parent,x,y,z,color){
   const form=roofForms.get(key(x,y,z));if(!form)return;
   const top=y+1;
+  const estate=architecture.get(key(x,y,z))?.tier==='estate';
+  const rise=estate?1.35:1;
   if(form.kind==='terrace'){
     const deck=box(parent,1,.08,1,x,top+.04,z,'#bba47d');
     deck.userData={position:[x,y,z],normal:[0,1,0]};targets.push(deck);
@@ -86,11 +88,11 @@ function roof(parent,x,y,z,color){
   }
   if(form.kind==='hip'){
     const corners=[[x-.53,top,z-.53],[x+.53,top,z-.53],[x+.53,top,z+.53],[x-.53,top,z+.53]];
-    for(let i=0;i<4;i++)triangle(corners[i],corners[(i+1)%4],[x,top+.48,z]);
+    for(let i=0;i<4;i++)triangle(corners[i],corners[(i+1)%4],[x,top+.48*rise,z]);
   }else{
     const cross=form.axis==='x'?z:x,along=form.axis==='x'?x:z;
     const cuts=[cross-.5,...(form.ridge>cross-.5&&form.ridge<cross+.5?[form.ridge]:[]),cross+.5];
-    const height=c=>top+Math.max(0,1-Math.abs(c-form.ridge)/((form.hi-form.lo)/2))*form.height;
+    const height=c=>top+Math.max(0,1-Math.abs(c-form.ridge)/((form.hi-form.lo)/2))*form.height*rise;
     const point=(a,c,h=height(c))=>form.axis==='x'?[a,h,c]:[c,h,a];
     for(let i=0;i<cuts.length-1;i++){
       const c=cuts[i],d=cuts[i+1],a=point(along-.5,c),b=point(along+.5,c),e=point(along+.5,d),f=point(along-.5,d);
@@ -105,6 +107,15 @@ function roof(parent,x,y,z,color){
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();
   const roofMaterial=material(color);roofMaterial.side=THREE.DoubleSide;
   const m=new THREE.Mesh(geometry,roofMaterial);m.castShadow=true;m.receiveShadow=true;m.userData={position:[x,y,z],normal:[0,1,0]};parent.add(m);targets.push(m);
+  if(form.kind==='gable'){
+    const cross=form.axis==='x'?z:x;
+    if(form.ridge>=cross-.5&&form.ridge<cross+.5)box(parent,form.axis==='x'?1.02:.07,.07,form.axis==='z'?1.02:.07,form.axis==='x'?x:form.ridge,top+form.height*rise,form.axis==='z'?z:form.ridge,color);
+  }
+  if(estate&&form.anchor===key(x,y,z)){
+    // A capped stone chimney gives larger roof silhouettes a distinct finish.
+    box(parent,.16,.6,.18,x+.24,top+.42,z+.16,'#afa78f');
+    box(parent,.22,.07,.24,x+.24,top+.75,z+.16,'#d9d0b5');
+  }
   for(const [dx,,dz]of directions)if(!blocks[key(x+dx,y,z+dz)])box(parent,dx?.055:1,.065,dz?.055:1,x+dx*.5,top,z+dz*.5,'#8e7955');
 }
 function railing(parent,x,y,z,dx,dz,color){
@@ -124,6 +135,7 @@ function rebuild(){
   clear(buildings);targets=[];
   waterAnalysis=waterView.rebuild(water,blocks);
   roofForms=roofPlan(blocks);
+  architecture=architecturePlan(blocks);
   for(const [k,b]of Object.entries(blocks)){
     const [x,y,z]=k.split(',').map(Number);
     if(b.type==='tree'){tree(buildings,x,z);}
@@ -141,7 +153,8 @@ function rebuild(){
     }
     if(b.type==='house'){
       const wetBase=y===0&&!!water[waterKey(x,z)],base=wetBase?.26:0;
-      const wall=timber[b.wood];box(buildings,1,1-base,1,x,y+base+(1-base)/2,z,wall);
+      const tier=architecture.get(k).tier,estate=tier==='estate',lodge=tier==='lodge';
+      const wall=estate?(y===0?'#b6ad94':'#e0d4b7'):timber[b.wood];box(buildings,1,1-base,1,x,y+base+(1-base)/2,z,wall);
       if(wetBase){
         for(const dx of [-.37,.37])for(const dz of [-.37,.37])box(buildings,.1,.28,.1,x+dx,.14,z+dz,'#817057');
         box(buildings,1.08,.08,1.08,x,.26,z,'#ac916a');
@@ -149,10 +162,39 @@ function rebuild(){
       for(const [dx,,dz]of directions){
         if(blocks[key(x+dx,y,z+dz)]?.type==='house')continue;
         const face=new THREE.Group();face.position.set(x+dx*.505,y+base,z+dz*.505);face.scale.y=1-base;face.rotation.y=dx?dx*Math.PI/2:dz===-1?Math.PI:0;buildings.add(face);
-        for(let h=.17;h<1;h+=.19)box(face,1,.017,.016,0,h,0,'#987951');
+        if(lodge){
+          for(let h=.1;h<1;h+=.16){
+            const log=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,1.04,7),material(timber[b.wood]));
+            log.rotation.z=Math.PI/2;log.position.set(0,h,.008);log.castShadow=true;face.add(log);
+          }
+        }else if(estate){
+          box(face,1.04,.09,.09,0,.94,.025,'#eaddc2');
+          box(face,1.04,.08,.08,0,.07,.025,'#a79a7e');
+          for(const side of [-1,1]){
+            box(face,.075,.84,.08,side*.45,.5,.025,timber[b.wood]);
+            if(y===0)for(let h=.18;h<.9;h+=.2)box(face,.13,.09,.1,side*.43,h,.035,'#d6cbb1');
+          }
+        }else for(let h=.17;h<1;h+=.19)box(face,1,.017,.016,0,h,0,'#987951');
         const terraceDoor=y>0&&(blocks[key(x+dx,y,z+dz)]?.type==='balcony'||roofForms.get(key(x+dx,y-1,z+dz))?.kind==='terrace');
-        if((y===0&&dz===1)||terraceDoor){box(face,.24,.57,.035,0,.285,0,'#6c5942');box(face,.035,.035,.04,.065,.29,.02,'#e1c98c');}
-        else{box(face,.3,.36,.025,0,.57,.016,'#735e45');box(face,.23,.28,.03,0,.57,.035,'#f2d292');box(face,.025,.28,.035,0,.57,.055,'#957b50');box(face,.23,.025,.035,0,.57,.055,'#957b50');}
+        if((y===0&&dz===1)||terraceDoor){
+          box(face,estate?.34:.24,.61,.045,0,.305,.09,'#6c5942');
+          box(face,.035,.035,.04,.08,.29,.12,'#e1c98c');
+          if(estate){
+            for(const side of [-1,1])box(face,.065,.66,.12,side*.22,.33,.09,'#eaddc2');
+            box(face,.54,.09,.18,0,.69,.09,'#eaddc2');
+            box(face,.22,.12,.04,0,.54,.12,'#f2d292');
+          }
+        }else{
+          const positions=estate?[-.22,.22]:[0];
+          for(const wx of positions){
+            const w=estate?.25:.3,h=estate?.46:.36,depth=lodge?.105:.035;
+            box(face,w+.07,h+.07,.055,wx,.56,depth,'#735e45');
+            box(face,w,h,.03,wx,.56,depth+.04,'#f2d292');
+            box(face,.025,h,.035,wx,.56,depth+.06,'#957b50');
+            box(face,w,.025,.035,wx,.56,depth+.06,'#957b50');
+            if(estate){box(face,w+.1,.055,.12,wx,.29,.06,'#eaddc2');box(face,w+.1,.065,.09,wx,.83,.06,'#eaddc2');}
+          }
+        }
         // Brackets under cantilevered rooms, leaving walkable space below.
         if(y>0&&!blocks[key(x,y-1,z)]){const brace=box(face,.07,.48,.07,dx?-.29:.29,-.13,-.12,'#8a7050');brace.rotation.x=-.65;}
       }

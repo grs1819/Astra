@@ -76,8 +76,26 @@ export function roofPlan(blocks){
     const spanX=Math.max(...xs)-Math.min(...xs),spanZ=Math.max(...zs)-Math.min(...zs);
     const axis=spanX>=spanZ?'x':'z',cross=axis==='x'?zs:xs;
     const lo=Math.min(...cross)-.5,hi=Math.max(...cross)+.5;
-    const form={kind:queue.length===1?'hip':'gable',axis,lo,hi,ridge:(lo+hi)/2,height:Math.min(.8,.44*(hi-lo))};
+    const form={anchor:queue[0],kind:queue.length===1?'hip':'gable',axis,lo,hi,ridge:(lo+hi)/2,height:Math.min(.8,.44*(hi-lo))};
     for(const k of queue)plan.set(k,form);
+  }
+  return plan;
+}
+
+// Derive architecture from connected rooms, never from permanent unlock state.
+export function architecturePlan(blocks){
+  const pending=new Set(Object.keys(blocks).filter(k=>blocks[k].type==='house')),plan=new Map();
+  const neighbors=[...directions,[0,1,0],[0,-1,0]];
+  while(pending.size){
+    const first=pending.values().next().value,rooms=[first];pending.delete(first);
+    for(let i=0;i<rooms.length;i++){
+      const [x,y,z]=rooms[i].split(',').map(Number);
+      for(const [dx,dy,dz]of neighbors){const k=key(x+dx,y+dy,z+dz);if(pending.delete(k))rooms.push(k);}
+    }
+    const ys=rooms.map(k=>Number(k.split(',')[1])),height=Math.max(...ys)-Math.min(...ys)+1;
+    const tier=height>=4||rooms.length>=10?'estate':height>=2||rooms.length>=3?'lodge':'cottage';
+    const form={tier,height,rooms:rooms.length};
+    for(const k of rooms)plan.set(k,form);
   }
   return plan;
 }

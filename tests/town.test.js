@@ -33,3 +33,26 @@ test('roof footprints align ridges and create reversible terraces beside taller 
   b['0,1,1']=house;roofs=roofPlan(b);assert.equal(roofs.get('0,0,0').kind,'terrace');assert.equal(roofs.has('0,0,1'),false);assert.equal(roofs.get('0,1,1').kind,'hip');
   delete b['0,1,1'];assert.equal(roofPlan(b).get('0,0,0').kind,'gable');
 });
+
+test('architecture grows with height or footprint and shrinks after removal',async()=>{
+  const {architecturePlan}=await import('../town.js');
+  const b={'0,0,0':house,'5,0,0':house};
+  assert.equal(architecturePlan(b).get('0,0,0').tier,'cottage');
+  b['0,1,0']=house;
+  assert.equal(architecturePlan(b).get('0,0,0').tier,'lodge');
+  b['0,2,0']=house;b['0,3,0']=house;
+  let plan=architecturePlan(b);
+  assert.equal(plan.get('0,0,0').tier,'estate');
+  assert.equal(plan.get('0,3,0'),plan.get('0,0,0'));
+  assert.equal(plan.get('5,0,0').tier,'cottage');
+  delete b['0,3,0'];assert.equal(architecturePlan(b).get('0,0,0').tier,'lodge');
+  const wide={};for(let x=0;x<5;x++)for(let z=0;z<2;z++)wide[key(x,0,z)]=house;
+  assert.equal(architecturePlan(wide).get('0,0,0').tier,'estate');
+});
+
+test('balconies do not merge separate buildings into one estate',async()=>{
+  const {architecturePlan}=await import('../town.js');
+  const b={'0,0,0':house,'1,0,0':{type:'balcony'},'2,0,0':house};
+  const plan=architecturePlan(b);
+  assert.equal(plan.get('0,0,0').rooms,1);assert.equal(plan.get('2,0,0').rooms,1);
+});

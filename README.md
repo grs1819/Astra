@@ -83,3 +83,13 @@ Publish `index.html`, `style.css`, `app.js`, `town.js`, `water.js`, `water-view.
 ## Brand assets
 
 The approved house, warm window, and water-line logo is in `assets/stillwater-mark.png`. The contrasting pine-green app and browser icon is in `assets/stillwater-icon.png`. Both assets are bundled locally. The game name is Stillwater; the displayed slogan is “Still water - a little place to grow”.
+
+### Growing architecture
+Connected house rooms evolve together: one or two ground-floor rooms remain cottages;
+two stories or three rooms become a log cabin; four stories or ten rooms become an
+estate. Log cabins have rounded timber courses. Estates gain stone foundations,
+plaster and timber upper walls, paired tall windows, framed entrances, cornices,
+steeper roofs, and capped chimneys. Timber and roofing selections still apply.
+Terraces and shared roof ridges continue to follow the footprint. Removing rooms,
+undoing, and loading a saved town recalculate the style automatically. Balconies
+connect walkable spaces without merging separate architectural styles.

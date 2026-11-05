@@ -117,6 +117,28 @@ export function assignRole(blocks,start,role){
   return next;
 }
 export function upgradeCamp(blocks,k){
-  if(blocks[k]?.type!=='camp'||(blocks[k].stage||1)>=3)return null;
-  const next=structuredClone(blocks);next[k].stage=(next[k].stage||1)+1;return next;
+  if(blocks[k]?.type!=='camp')return null;
+  const group=campsitePlan(blocks).get(k);
+  const stage=Math.max(group.stage,...group.tiles.map(id=>blocks[id].stage||1));
+  if(stage>=3)return null;
+  const next=structuredClone(blocks);
+  for(const id of group.tiles)next[id]={...next[id],stage:stage+1};
+  return next;
+}
+
+// Cardinally connected camp tiles share one gathering space. Sorted keys keep
+// its location stable through save/reload, irrespective of placement order.
+export function campsitePlan(blocks){
+  const pending=new Set(Object.keys(blocks).filter(k=>blocks[k].type==='camp').sort()),plan=new Map();
+  while(pending.size){
+    const first=pending.values().next().value,tiles=[first];pending.delete(first);
+    for(let i=0;i<tiles.length;i++){
+      const [x,y,z]=tiles[i].split(',').map(Number);
+      for(const [dx,,dz]of directions){const k=key(x+dx,y,z+dz);if(pending.delete(k))tiles.push(k);}
+    }
+    tiles.sort();
+    const group={tiles,size:tiles.length,hub:tiles.length>=2?tiles[0]:null,stage:tiles.length>=4?3:tiles.length>=2?2:1};
+    for(const k of tiles)plan.set(k,group);
+  }
+  return plan;
 }

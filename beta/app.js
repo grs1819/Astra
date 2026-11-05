@@ -3,7 +3,7 @@ import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
 import {createWaterView} from './water-view.js';
 import {createVillagers} from './villagers.js';
-import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp} from './town.js';
+import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp, campsitePlan} from './town.js';
 
 const $=s=>document.querySelector(s);
 const canvas=$('#world');
@@ -189,14 +189,24 @@ function arch(parent,x,y,z,axis,color){
 }
 const roleLabels={fishing:'FISHING',supply:'OUTFITTER',cafe:'BAKERY',inn:'LODGE',workshop:'WOODWORK',boathouse:'BOATHOUSE'};
 const signMaterials=new Map();
-function roleDetails(parent,x,z,role,base){
-  if(blocks[key(x,0,z+1)]?.type==='house')return;
-  const g=new THREE.Group();g.position.set(x,base,z);parent.add(g);
+const roleColors={fishing:'#397c8a',supply:'#b27a3c',cafe:'#b96452',inn:'#716095',workshop:'#826341',boathouse:'#436999'};
+function roleDetails(parent,x,z,role,base,dx=0,dz=1){
+  const g=new THREE.Group();g.position.set(x,base,z);g.rotation.y=dx?dx*Math.PI/2:dz===-1?Math.PI:0;parent.add(g);
   if(!signMaterials.has(role)){
-    const c=document.createElement('canvas');c.width=256;c.height=64;const ctx=c.getContext('2d');ctx.fillStyle='#374e3d';ctx.fillRect(0,0,256,64);ctx.fillStyle='#fff0cf';ctx.font='bold 25px sans-serif';ctx.textAlign='center';ctx.fillText(roleLabels[role],128,42);
+    const c=document.createElement('canvas');c.width=256;c.height=64;const ctx=c.getContext('2d');ctx.fillStyle=roleColors[role];ctx.fillRect(0,0,256,64);ctx.fillStyle='#fff0cf';ctx.font='bold 30px sans-serif';ctx.textAlign='center';ctx.fillText(roleLabels[role],128,42);
     const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;signMaterials.set(role,new THREE.MeshBasicMaterial({map:texture}));
   }
-  const sign=new THREE.Mesh(new THREE.PlaneGeometry(.76,.19),signMaterials.get(role));sign.position.set(0,.83,.566);g.add(sign);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(.98,.25),signMaterials.get(role));sign.position.set(0,.84,.61);g.add(sign);
+  box(g,1.04,.28,.075,0,.84,.555,roleColors[role]);
+  // Color-coded corner banners and projecting signs stay legible while orbiting.
+  box(g,.16,.5,.06,-.4,.42,.56,roleColors[role]);
+  box(g,.045,.48,.045,.46,.77,.66,'#69583e');
+  box(g,.045,.045,.3,.46,.99,.67,'#69583e');
+  const hanging=new THREE.Mesh(new THREE.PlaneGeometry(.28,.23),signMaterials.get(role));
+  hanging.material.side=THREE.DoubleSide;hanging.position.set(.46,.83,.72);hanging.rotation.y=Math.PI/2;g.add(hanging);
+  if(role!=='cafe'){
+    const canopy=box(g,.78,.055,.26,0,.66,.64,roleColors[role]);canopy.rotation.x=.14;
+  }
   if(role==='cafe'){
     const awning=box(g,.88,.05,.25,0,.7,.62,'#b97859');awning.rotation.x=.15;
     for(let i=-2;i<=2;i++)box(g,.08,.055,.25,i*.17,.705,.62,'#f0dfb8');
@@ -229,16 +239,52 @@ function camp(parent,x,z,stage){
   }
 }
 
+function campGathering(parent,x,z,size){
+  const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
+  const fancy=size>=4;
+  const hearth=new THREE.Mesh(new THREE.CylinderGeometry(fancy?.24:.18,fancy?.25:.2,.06,12),material('#645c50'));
+  hearth.position.y=.065;hearth.receiveShadow=true;g.add(hearth);
+  for(let i=0;i<(fancy?12:7);i++){
+    const a=i/(fancy?12:7)*Math.PI*2,r=fancy?.23:.18;
+    const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(fancy?.055:.045,0),material(i%2?'#aaa58f':'#898877'));
+    stone.position.set(Math.cos(a)*r,.105,Math.sin(a)*r);g.add(stone);
+  }
+  for(const angle of [-.65,.65]){const log=box(g,.29,.05,.06,0,.105,0,'#72503a');log.rotation.y=angle;}
+  // Low-poly flames are static so reduced-motion users get the same scene.
+  for(let i=0;i<3;i++){
+    const flame=new THREE.Mesh(new THREE.ConeGeometry(.055,.19+i*.035,5),material(i===1?'#ffd47a':'#e99444'));
+    flame.position.set((i-1)*.045,.19,0);g.add(flame);
+  }
+  if(fancy){
+    for(const side of [-1,1]){
+      box(g,.2,.045,.23,side*.36,.17,0,'#b58d5d');
+      box(g,.045,.23,.23,side*.45,.29,0,'#9c764f');
+      for(const z of [-.08,.08])box(g,.035,.16,.035,side*.36,.08,z,'#745b40');
+    }
+    box(g,.3,.06,.15,0,.18,-.39,'#ba976b');
+    for(const side of [-1,1])box(g,.035,.16,.1,side*.1,.08,-.39,'#745b40');
+    box(g,.035,.65,.035,.4,.325,.4,'#756445');
+    box(g,.09,.13,.09,.4,.62,.4,'#e8c77c');
+  }else box(g,.38,.1,.13,0,.085,-.36,'#98744e');
+}
+
 function rebuild(){
   renderer.shadowMap.needsUpdate=true;
   clear(buildings);targets=[];
   waterAnalysis=waterView.rebuild(water,blocks);
   roofForms=roofPlan(blocks);
   architecture=architecturePlan(blocks);
+  const camps=campsitePlan(blocks);
   for(const [k,b]of Object.entries(blocks)){
     const [x,y,z]=k.split(',').map(Number);
     if(b.type==='tree'){tree(buildings,x,z);}
-    if(b.type==='camp')camp(buildings,x,z,b.stage||1);
+    if(b.type==='camp'){
+      const group=camps.get(k);
+      // Contiguous ground pads visually join the tents and gathering area.
+      if(group.size>=2)box(buildings,1,.035,1,x,.018,z,'#ad9c78');
+      if(group.hub===k)campGathering(buildings,x,z,group.size);
+      else camp(buildings,x,z,Math.max(b.stage||1,group.stage));
+    }
     if(b.type==='path'){
       if(water[waterKey(x,z)]){
         box(buildings,1,.12,1,x,.15,z,'#b49a71');
@@ -298,7 +344,7 @@ function rebuild(){
         // Brackets under cantilevered rooms, leaving walkable space below.
         if(y>0&&!blocks[key(x,y-1,z)]){const brace=box(face,.07,.48,.07,dx?-.29:.29,-.13,-.12,'#8a7050');brace.rotation.x=-.65;}
       }
-      if(y===0&&b.role&&b.role!=='home')roleDetails(buildings,x,z,b.role,base);
+      if(y===0&&b.role&&b.role!=='home')for(const [dx,,dz]of directions)if(blocks[key(x+dx,0,z+dz)]?.type!=='house')roleDetails(buildings,x,z,b.role,base,dx,dz);
       // Short entrance stairs occupy only free frontage and rebuild with terrain.
       if(y===0&&!blocks[key(x,0,z+1)]&&!water[waterKey(x,z+1)]&&z<LIMIT){
         const steps=wetBase?3:1;
@@ -364,7 +410,7 @@ function pick(e){const rect=canvas.getBoundingClientRect();pointer.set((e.client
 function preview(hit){
   const p=destination(hit);
   const wet=hit&&water[waterKey(hit.position[0],hit.position[2])];
-  ghost.visible=!!p&&(tool==='water'?!!waterEdit(water,blocks,p[0],p[2],$('#water-kind').value,LIMIT):tool==='erase'?(!hit.ground||!!wet):tool==='camp'&&blocks[key(...p)]?.type==='camp'?(blocks[key(...p)].stage||1)<3:canPlace(blocks,...p,tool,water));
+  ghost.visible=!!p&&(tool==='water'?!!waterEdit(water,blocks,p[0],p[2],$('#water-kind').value,LIMIT):tool==='erase'?(!hit.ground||!!wet):tool==='camp'&&blocks[key(...p)]?.type==='camp'?!!upgradeCamp(blocks,key(...p)):canPlace(blocks,...p,tool,water));
   if(tool==='water'&&hit){
     const body=waterAnalysis.cells.get(waterKey(hit.position[0],hit.position[2]));
     $('#water-status').textContent=body?`${body.size} connected tiles · ${['Gentle ripples','Pebbles along the banks','Boulders join the shoreline','Reeds and water lilies'][body.tier]}`:'Click the grid to grow a waterway.';

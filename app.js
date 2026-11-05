@@ -227,10 +227,43 @@ function preview(hit){
   ghost.material.color.set(tool==='water'?'#77c9ce':tool==='erase'?'#d78469':'#fff5bf');
   ghost.scale.set(1,tool==='water'?.065:tool==='balcony'?.16:1,1);
 }
-canvas.addEventListener('pointerdown',e=>{if(e.button===1)e.preventDefault();pointerDown={x:e.clientX,y:e.clientY,button:e.button,moved:false,alt:e.altKey};});
-canvas.addEventListener('pointermove',e=>{if(pointerDown&&Math.hypot(e.clientX-pointerDown.x,e.clientY-pointerDown.y)>5)pointerDown.moved=true;hoverHit=pick(e);preview(hoverHit);if(pointerDown?.moved)ghost.visible=false;});
-canvas.addEventListener('pointerup',e=>{if(pointerDown&&!pointerDown.moved&&pointerDown.button!==1)edit(pick(e),pointerDown.button===2,pointerDown.alt);pointerDown=null;ghost.visible=false;});
-canvas.addEventListener('pointercancel',()=>pointerDown=null);canvas.addEventListener('pointerleave',()=>ghost.visible=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+function resetPointerInteraction(){
+  const id=pointerDown?.pointerId;
+  pointerDown=null;ghost.visible=false;canvas.style.cursor='';
+  if(id!==undefined&&canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);
+  // A release outside the window can leave OrbitControls tracking the old
+  // mouse pointer. Reset its public event connection before the next gesture.
+  controls.disconnect();controls.connect(canvas);
+}
+// Recover a missed release before OrbitControls sees a fresh mouse press.
+canvas.addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='touch'&&pointerDown?.pointerId===e.pointerId)resetPointerInteraction();
+},{capture:true});
+canvas.addEventListener('pointerdown',e=>{
+  if(![0,1,2].includes(e.button))return;
+  if(e.button===1){e.preventDefault();canvas.style.cursor='grabbing';}
+  pointerDown={pointerId:e.pointerId,x:e.clientX,y:e.clientY,button:e.button,moved:false,alt:e.altKey};
+});
+canvas.addEventListener('pointermove',e=>{
+  if(pointerDown&&Math.hypot(e.clientX-pointerDown.x,e.clientY-pointerDown.y)>5)pointerDown.moved=true;
+  // Camera drags do not need an expensive building raycast on every event.
+  if(pointerDown&&(pointerDown.button===1||pointerDown.moved)){ghost.visible=false;return;}
+  hoverHit=pick(e);preview(hoverHit);
+});
+canvas.addEventListener('pointerup',e=>{
+  if(pointerDown?.pointerId!==e.pointerId)return;
+  if(!pointerDown.moved&&pointerDown.button!==1)edit(pick(e),pointerDown.button===2,pointerDown.alt);
+  pointerDown=null;ghost.visible=false;canvas.style.cursor='';
+});
+canvas.addEventListener('pointercancel',()=>{pointerDown=null;ghost.visible=false;canvas.style.cursor='';});
+canvas.addEventListener('lostpointercapture',e=>{if(pointerDown?.pointerId===e.pointerId)resetPointerInteraction();});
+addEventListener('blur',resetPointerInteraction);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)resetPointerInteraction();});
+// Suppress native middle-button autoscroll on browsers that still dispatch it.
+canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
+canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
+canvas.addEventListener('pointerleave',()=>ghost.visible=false);
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
 function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=value==='water';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>selectTool(b.dataset.tool));
 $('#undo').onclick=undo;

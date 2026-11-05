@@ -41,9 +41,15 @@ Your selected tool and materials stay active while the dock is collapsed; 1–6 
 
 To make an archway, build two two-floor towers with one empty tile between them, then click an inner upper wall to bridge the gap. Stone arch supports appear automatically. Single cottages get hipped roofs. Connected roof footprints share a sloped ridge along their longest direction. Exposed lower roofs beside taller rooms become railed timber terraces, with doorways from adjacent rooms. Raised waterside entrances gain steps where the frontage is dry and open. Build directly on a terrace to add another floor; roofs and terraces recalculate after placement, removal, or undo. This remains a grid-based modular system.
 
-Discoveries are earned from distinct cottage plots: villagers at 3, birch at 6, terracotta at 9, cedar and slate at 12. Discoveries stay unlocked after removal and undo. Villagers currently wander decoratively.
+Discoveries are earned from distinct cottage plots: villagers at 3, birch at 6, terracotta at 9, cedar and slate at 12. Discoveries stay unlocked after removal and undo. Villagers are small animated characters with walking limbs, varied clothes, hair, and hats. They follow ground and path routes instead of drifting through buildings or open water.
 
 Towns autosave in browser local storage (`mosswood-v2`); this existing key is intentionally retained so the Stillwater rebrand preserves your saved village. The first launch imports a previous `mosswood-v1` town, including floors and materials, without deleting the old save. Storage is specific to your browser and site address.
+
+## Village life
+
+Three cottage plots unlock residents. Each accessible ground-floor cottage can show two residents, up to 24 visible characters. Walkers prefer paths but can explore dry ground. Build at least **three connected path tiles near a home** to see some residents ride bicycles, with turning wheels and pedaling legs. Connected wooden footbridges also support walking and cycling.
+
+Residents follow routes around buildings, trees, open water, and bridge railings. Their feet and wheels follow ground and deck heights. Editing the village recalculates routes immediately; residents without a safe way out stay indoors. Animation pauses with the system's reduced-motion preference. Residents are ambient village life, not a traffic or needs simulation.
 
 ## Streams, rivers, and lakes
 
@@ -72,7 +78,7 @@ With Water selected, **right-click removes water only**, including beneath build
 
 In GitHub **Settings → Pages**, choose **Deploy from a branch**, **main**, and **/ (root)**, then Save. The game is available at https://grs1819.github.io/Stillwater/ after deployment.
 
-Publish `index.html`, `style.css`, `app.js`, `town.js`, `water.js`, `water-view.js`, and the complete `vendor/` and `assets/` directories. The Node server is only needed for local development. No secrets or build configuration are required. Desktop browsers with WebGL2 support are required; touch gestures are available but mobile layouts are not yet optimized.
+Publish `index.html`, `style.css`, `app.js`, `town.js`, `water.js`, `water-view.js`, `navigation.js`, `villagers.js`, and the complete `vendor/` and `assets/` directories. The Node server is only needed for local development. No secrets or build configuration are required. Desktop browsers with WebGL2 support are required; touch gestures are available but mobile layouts are not yet optimized.
 
 ## Brand assets
 

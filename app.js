@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
 import {createWaterView} from './water-view.js';
+import {createVillagers} from './villagers.js';
 import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan} from './town.js';
 
 const $=s=>document.querySelector(s);
@@ -52,8 +53,9 @@ const waterView=createWaterView(scene,material,box);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 let waterAnalysis;
 let blocks=state.blocks,peak=state.peak,history=[],tool='house',pointerDown=null,hoverHit=null;
-const buildings=new THREE.Group(),people=new THREE.Group();scene.add(buildings,people);
-let targets=[],villagers=[];
+const buildings=new THREE.Group();scene.add(buildings);
+const villagers=createVillagers(scene,material);
+let targets=[];
 const milestones=[{n:3,name:'The first neighbors',text:'Villagers have found their way to Stillwater.'},{n:6,name:'A lighter touch',text:'Silver birch timber unlocked.'},{n:9,name:'Earth & ember',text:'Terracotta roofs unlocked.'},{n:12,name:'A town of your own',text:'Red cedar and river slate unlocked.'}];
 function notify(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(notify.timer);notify.timer=setTimeout(()=>$('#toast').classList.remove('show'),4200);}
 function save(){try{localStorage.setItem('mosswood-v2',JSON.stringify({blocks,water,peak}));}catch{notify('Autosave unavailable. Keep this tab open to preserve your town.');}}
@@ -119,7 +121,7 @@ function arch(parent,x,y,z,axis,color){
 }
 function rebuild(){
   renderer.shadowMap.needsUpdate=true;
-  clear(buildings);clear(people);targets=[];villagers=[];
+  clear(buildings);targets=[];
   waterAnalysis=waterView.rebuild(water,blocks);
   roofForms=roofPlan(blocks);
   for(const [k,b]of Object.entries(blocks)){
@@ -173,7 +175,7 @@ function rebuild(){
     const proxy=new THREE.Mesh(new THREE.BoxGeometry(1,b.type==='house'?1:b.type==='tree'?1.7:b.type==='path'&&water[waterKey(x,z)]?.45:.15,1),invisible);
     proxy.position.set(x,y+(b.type==='house'?.5:b.type==='tree'?.85:b.type==='path'&&water[waterKey(x,z)]?.225:.075),z);proxy.userData={position:[x,y,z]};buildings.add(proxy);targets.push(proxy);
   }
-  if(peak>=3){const homes=Object.keys(blocks).filter(k=>blocks[k].type==='house'&&Number(k.split(',')[1])===0);homes.slice(0,24).forEach((k,i)=>{const[x,,z]=k.split(',').map(Number);const g=new THREE.Group();box(g,.11,.22,.12,0,.14,0,['#a8735e','#788da5','#ba9d54'][i%3]);const head=new THREE.Mesh(new THREE.SphereGeometry(.075,6,5),material('#e6c59e'));head.position.y=.31;g.add(head);people.add(g);villagers.push({g,x,z,i});});}
+  villagers.rebuild(blocks,water,peak>=3);
 }
 function commit(next,nextWater=water){
   history.push(JSON.stringify({blocks,water}));if(history.length>80)history.shift();
@@ -268,11 +270,6 @@ function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMa
 updateUI();rebuild();save();
 renderer.setAnimationLoop(t=>{
   controls.update();waterView.animate(t,reducedMotion.matches);
-  for(const {g,x,z,i}of villagers){
-    const phase=t*.00025+i*2.4,px=x+Math.cos(phase)*.9,pz=z+1+Math.sin(phase)*.5;
-    const cell=blocks[key(Math.round(px),0,Math.round(pz))],wet=water[waterKey(Math.round(px),Math.round(pz))];
-    g.visible=cell?.type==='path'||(!cell&&!wet);
-    g.position.set(px,wet&&cell?.type==='path'?.22:0,pz);g.rotation.y=-phase;
-  }
+  villagers.animate(t,reducedMotion.matches);
   renderer.render(scene,camera);
 });

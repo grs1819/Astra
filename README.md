@@ -101,3 +101,19 @@ finish. Roof color remains selectable. Details follow sloped faces, including
 hip roofs and joined gables, while terraces remain usable timber decks.
 
 The roof menu selects Forest green, Rust red (9 cottages), or Slate blue (12 cottages). Cottage moss remains green over the selected roof color; growing buildings retain that color as roofing becomes metal. Existing saved roof selections carry over without migration.
+
+## Beta-first releases
+
+Live: https://grs1819.github.io/Stillwater/
+Beta: https://grs1819.github.io/Stillwater/beta/
+
+Changes are developed on the `beta` branch, then staged from a committed snapshot
+with `node scripts/stage-beta.mjs <commit>` in the main checkout. Only the generated
+`beta/` folder is published to main during testing; root live game files stay
+unchanged. `beta/release.json` records the exact source commit. After user approval,
+that exact version can be promoted to the live root. See AGENTS.md for the workflow.
+
+Beta has separate browser saves, so it starts with a fresh town and does not read
+or overwrite live towns. Saves persist between beta updates, but beta towns are
+not automatically transferred to live. The two sites share GitHub Pages hosting;
+this is a separate test game and save namespace, not a separate database.

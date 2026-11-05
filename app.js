@@ -17,7 +17,8 @@ const controls=new OrbitControls(camera,canvas);
 controls.enableDamping=true;
 controls.minDistance=5;controls.maxDistance=48;
 controls.minPolarAngle=.22;controls.maxPolarAngle=1.35;
-controls.mouseButtons={LEFT:THREE.MOUSE.PAN,MIDDLE:THREE.MOUSE.DOLLY,RIGHT:THREE.MOUSE.ROTATE};
+// Blender-style camera gestures; left/right buttons are reserved for edits.
+controls.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.ROTATE,RIGHT:null};
 controls.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};
 function recenter(){camera.position.set(19,20,25);controls.target.set(0,0,0);controls.update();}
 recenter();
@@ -113,7 +114,7 @@ function edit(hit,remove=false,paint=false){if(!hit)return;if(remove||tool==='er
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
 function pick(e){const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...targets,ground],false);for(const hit of hits){if(hit.object===ground){const x=Math.round(hit.point.x),z=Math.round(hit.point.z);return Math.abs(x)<=LIMIT&&Math.abs(z)<=LIMIT?{position:[x,0,z],normal:[0,1,0],ground:true}:null;}return {position:hit.object.userData.position,normal:hit.object.userData.normal||hit.face.normal.toArray().map(Math.round),ground:false};}return null;}
 function preview(hit){const p=destination(hit);ghost.visible=!!p&&(tool==='erase'?!hit.ground:canPlace(blocks,...p,tool));if(!ghost.visible)return;ghost.position.set(p[0],p[1]+.5,p[2]);ghost.material.color.set(tool==='erase'?'#d78469':'#fff5bf');ghost.scale.y=tool==='balcony'?.16:1;}
-canvas.addEventListener('pointerdown',e=>{pointerDown={x:e.clientX,y:e.clientY,button:e.button,moved:false,alt:e.altKey};});
+canvas.addEventListener('pointerdown',e=>{if(e.button===1)e.preventDefault();pointerDown={x:e.clientX,y:e.clientY,button:e.button,moved:false,alt:e.altKey};});
 canvas.addEventListener('pointermove',e=>{if(pointerDown&&Math.hypot(e.clientX-pointerDown.x,e.clientY-pointerDown.y)>5)pointerDown.moved=true;hoverHit=pick(e);preview(hoverHit);if(pointerDown?.moved)ghost.visible=false;});
 canvas.addEventListener('pointerup',e=>{if(pointerDown&&!pointerDown.moved&&pointerDown.button!==1)edit(pick(e),pointerDown.button===2,pointerDown.alt);pointerDown=null;ghost.visible=false;});
 canvas.addEventListener('pointercancel',()=>pointerDown=null);canvas.addEventListener('pointerleave',()=>ghost.visible=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());

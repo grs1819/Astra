@@ -14,13 +14,13 @@ Open port 5173 in your browser. Use `PORT=8080 npm start` to choose another port
 
 ## Camera
 
-- Left-drag to pan.
-- Right-drag to orbit horizontally and tilt vertically.
-- Scroll to zoom (or middle-drag).
+- Hold the middle mouse button and drag to orbit horizontally and tilt vertically.
+- Hold Shift and middle-drag to pan.
+- Scroll the mouse wheel to zoom in or out.
 - Use the on-screen rotation buttons, tilt slider, and zoom buttons for precise control.
 - Q / E rotate; Recenter restores the original view.
 
-A short right-click removes a block; dragging the right button only moves the camera.
+Left-click builds; a short right-click removes a block. Left/right drags do not move the camera or edit the town. Middle-clicking or dragging never edits the town.
 
 ## Build a town
 

@@ -144,3 +144,10 @@ remain reversible, while manual upgrades persist. Role buildings now display
 larger color-coded fascias, awnings, and projecting signs on exposed sides.
 
 Connected camp shelters now merge into a continuous roof and deck across their actual footprint, with perimeter-only supports. The gathering area moves to a nearby empty dry tile outside the fabric; it hides if no space is available and relocates when that tile is built on. Role signage appears only on one exposed entrance side per connected building, preferring the front.
+
+### Tower lookouts
+A one- or two-room summit above at least three directly stacked house rooms gains
+panoramic glazing, a timber floor, a brass telescope and tripod, a map table,
+and a woodburning stove with a roof flue. Broad summits and unsupported upper
+extensions retain normal architecture. Growing, reshaping, removing, undoing,
+and loading a town recompute the lookout automatically without new save fields.

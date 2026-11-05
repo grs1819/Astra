@@ -142,3 +142,22 @@ export function campsitePlan(blocks){
   }
   return plan;
 }
+
+// A narrow summit above three stacked rooms becomes an observation room.
+export function lookoutPlan(blocks){
+  const pending=new Set(Object.keys(blocks).filter(k=>{
+    const [x,y,z]=k.split(',').map(Number);
+    return blocks[k].type==='house'&&y>=2&&!blocks[key(x,y+1,z)];
+  })),result=new Set();
+  while(pending.size){
+    const start=pending.values().next().value,rooms=[start];pending.delete(start);
+    for(let i=0;i<rooms.length;i++){
+      const [x,y,z]=rooms[i].split(',').map(Number);
+      for(const [dx,,dz]of directions){const k=key(x+dx,y,z+dz);if(pending.delete(k))rooms.push(k);}
+    }
+    if(rooms.length>2)continue;
+    const supported=rooms.every(k=>{const [x,y,z]=k.split(',').map(Number);return [1,2].every(d=>blocks[key(x,y-d,z)]?.type==='house')&&!directions.some(([dx,,dz])=>blocks[key(x+dx,y+1,z+dz)]?.type==='house');});
+    if(supported)for(const k of rooms)result.add(k);
+  }
+  return result;
+}

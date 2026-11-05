@@ -1,4 +1,6 @@
-# Mosswood
+# Stillwater
+
+*Still water - a little place to grow.*
 
 A peaceful, creative 3D forest village toy for desktop browsers. No build step or package installation is required. The game includes Three.js 0.187.0 in `vendor/` with its MIT license, so it works without a CDN.
 
@@ -35,7 +37,7 @@ To make an archway, build two two-floor towers with one empty tile between them,
 
 Discoveries are earned from distinct cottage plots: villagers at 3, birch at 6, terracotta at 9, cedar and slate at 12. Discoveries stay unlocked after removal and undo. Villagers currently wander decoratively.
 
-Towns autosave in browser local storage (`mosswood-v2`). The first launch imports a previous `mosswood-v1` town, including floors and materials, without deleting the old save. Storage is specific to your browser and site address.
+Towns autosave in browser local storage (`mosswood-v2`); this existing key is intentionally retained so the Stillwater rebrand preserves your saved village. The first launch imports a previous `mosswood-v1` town, including floors and materials, without deleting the old save. Storage is specific to your browser and site address.
 
 ## Validation
 
@@ -45,4 +47,8 @@ Towns autosave in browser local storage (`mosswood-v2`). The first launch import
 
 In GitHub **Settings → Pages**, choose **Deploy from a branch**, **main**, and **/ (root)**, then Save. The game is available at https://grs1819.github.io/Astra/ after deployment.
 
-Publish `index.html`, `style.css`, `app.js`, `town.js`, and the complete `vendor/` directory. The Node server is only needed for local development. No secrets or build configuration are required. Desktop browsers with WebGL2 support are required; touch gestures are available but mobile layouts are not yet optimized.
+Publish `index.html`, `style.css`, `app.js`, `town.js`, and the complete `vendor/` and `assets/` directories. The Node server is only needed for local development. No secrets or build configuration are required. Desktop browsers with WebGL2 support are required; touch gestures are available but mobile layouts are not yet optimized.
+
+## Brand assets
+
+The approved house, warm window, and water-line logo is in `assets/stillwater-mark.png`. The contrasting pine-green app and browser icon is in `assets/stillwater-icon.png`. Both assets are bundled locally. The game name is Stillwater; the displayed slogan is “Still water - a little place to grow”.

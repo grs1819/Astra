@@ -1,0 +1,4 @@
+import http from 'node:http';
+import {readFile} from 'node:fs/promises';
+const files = {'/':'index.html','/app.js':'app.js','/style.css':'style.css'};
+http.createServer(async(req,res)=>{const path=files[new URL(req.url,'http://localhost').pathname];if(!path){res.writeHead(404);res.end('Not found');return;}try{const data=await readFile(new URL(path,import.meta.url));res.setHeader('Content-Type',path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'text/html');res.end(data);}catch{res.writeHead(500);res.end('Unable to load file');}}).listen(Number(process.env.PORT)||5173,'0.0.0.0',()=>console.log('Mosswood running on port '+(process.env.PORT||5173)));

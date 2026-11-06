@@ -256,7 +256,15 @@ function coveredDeck(parent,x,y,z,b){
   for(let i=0;i<cuts.length-1;i++){
     const a=point(along-.5,cuts[i]),c=point(along+.5,cuts[i]),d=point(along+.5,cuts[i+1]),e=point(along-.5,cuts[i+1]);vertices.push(...a,...c,...d,...a,...d,...e);
   }
-  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();const mat=roofingMaterial(roofs[b.roof],'lodge');
+  // Use the attached building's current color and progression for the whole canopy.
+  const source=blocks[form.attachedHouse]||b,tier=architecture.get(form.attachedHouse)?.tier||'lodge',color=roofs[source.roof];
+  // Roof details require upward-facing triangles.
+  for(let i=0;i<vertices.length;i+=9){
+    const a=new THREE.Vector3(...vertices.slice(i,i+3)),c=new THREE.Vector3(...vertices.slice(i+3,i+6)),d=new THREE.Vector3(...vertices.slice(i+6,i+9));
+    if(c.sub(a).cross(d.sub(a)).y<0){const swap=vertices.slice(i+3,i+6);vertices.splice(i+3,3,...vertices.slice(i+6,i+9));vertices.splice(i+6,3,...swap);}
+  }
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();const mat=roofingMaterial(color,tier);
+  roofDetails(parent,vertices,tier,color);
   const canopy=new THREE.Mesh(geometry,mat);canopy.castShadow=true;canopy.receiveShadow=true;parent.add(canopy);
   canopy.userData={position:[x,y,z],normal:[0,1,0]};targets.push(canopy);
   // Rafters follow the roof slope and stay visible from below.

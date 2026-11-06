@@ -128,3 +128,12 @@ test('path surfaces persist and old paths default to gravel',()=>{
  const b=normalize({blocks:{'0,0,0':{type:'path',surface:'cobble'},'1,0,0':{type:'path'}}}).blocks;
  assert.equal(b['0,0,0'].surface,'cobble');assert.equal(b['1,0,0'].surface,'gravel');
 });
+
+test('deck covers persist, join matching neighbors, and defer to overhead rooms',async()=>{
+ const {deckCoverPlan}=await import('../town.js');
+ const b={'0,0,0':{type:'balcony',cover:'roofed'},'1,0,0':{type:'balcony',cover:'roofed'},'2,0,0':{type:'balcony',cover:'pergola'},'0,0,-1':house};
+ let plan=deckCoverPlan(b);assert.equal(plan.get('0,0,0'),plan.get('1,0,0'));assert.notEqual(plan.get('1,0,0'),plan.get('2,0,0'));assert.deepEqual(plan.get('0,0,0').wall,[0,-1]);
+ assert.equal(normalize({blocks:b}).blocks['0,0,0'].cover,'roofed');
+ b['0,1,0']=house;plan=deckCoverPlan(b);assert.equal(plan.has('0,0,0'),false);assert.equal(plan.get('1,0,0').tiles.length,1);
+ delete b['0,1,0'];b['0,0,0'].cover='open';assert.equal(deckCoverPlan(b).has('0,0,0'),false);
+});

@@ -234,3 +234,12 @@ sections omit internal railings. Wall-attached elevated decks gain diagonal
 brackets, while decks beneath house rooms gain timber posts and braces. Ground
 frontages and path connections stay open, with a step on clear dry frontage.
 Roof terraces share the same detailing.
+
+### Deck covers
+Deck (5) offers Open, Pergola, and Roofed covers alongside the timber and roof
+color selectors. Tap an existing deck to apply those choices; Undo restores the
+previous finish. Matching adjacent covered tiles share a canopy and omit interior
+support posts. Wall-adjacent roofs slope away from the building; freestanding
+covers form gables. Pergolas use open rafters with timber posts and diagonal
+braces. An occupied room directly overhead suppresses the extra canopy. Existing
+decks load as open, and cover selections persist with saved towns.

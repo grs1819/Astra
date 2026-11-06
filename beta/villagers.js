@@ -46,8 +46,8 @@ export function createVillagers(scene,material){
         cranks.push(mesh(root,'shoe','#665b49',[.07,.035,.09],[0,0,0]));
       }
     }
-    const rod=new THREE.Mesh(geometries.limb,material('#795b39'));rod.scale.set(.009,.65,.009);rod.position.set(.08,.38,.24);rod.rotation.x=.85;rod.visible=false;figure.add(rod);
-    return {root,figure,arms,legs,wheels,cranks,pedalLegs,bike,rod};
+    const fishingRod=new THREE.Mesh(geometries.limb,material('#795b39'));fishingRod.scale.set(.009,.65,.009);fishingRod.position.set(.08,.38,.24);fishingRod.rotation.x=.85;fishingRod.visible=false;figure.add(fishingRod);
+    return {root,figure,arms,legs,wheels,cranks,pedalLegs,bike,rod:fishingRod};
   }
   function rebuild(blocks,water,unlocked){
     // Geometry and materials are shared; rebuilding removes instances only.
@@ -102,7 +102,7 @@ export function createVillagers(scene,material){
       }
       if(!a.route.length)continue;
       const start=a.graph.get(a.id),end=a.graph.get(a.route[0]);
-      const speed=a.bike?.7:.32+(a.index%3)*.035;a.progress=Math.min(1,a.progress+dt*speed);
+      const speed=a.bike?.7:.32+(a.index%3)*.035;a.progress=Math.min(1,a.progress+dt*speed/Math.hypot(end.x-start.x,end.z-start.z));
       const x=THREE.MathUtils.lerp(start.x,end.x,a.progress),z=THREE.MathUtils.lerp(start.z,end.z,a.progress);
       // Feet and wheels follow the actual tile height, including raised bridge decks.
       const tile=walkGraph.get(waterKey(Math.round(x),Math.round(z)));

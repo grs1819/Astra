@@ -216,3 +216,11 @@ Existing right-angle connections suppress redundant diagonal infill, while isola
 diagonal chains remain connected. Paving and timber decks share a 0.1-unit surface
 height, removing overlapping approach ramps. Water paths retain timber decks and
 remember their selected paving for when water is removed.
+
+### Timber-frame first pass
+The largest stage is presented as a Timber Lodge. Upper floors use vertical
+siding in the selected wood, above a stone base. Exposed gable ends gain timber
+rafters, ties, upright members, and braces. Rectangular and tower roofs gain deeper
+eaves with timber undersides and supports. Concave roof overhangs remain restrained
+to preserve clean joins; expanded Nordic roof and porch variants are future work.
+Small-window proportions and panoramic lookout interiors remain intact.

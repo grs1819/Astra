@@ -139,6 +139,12 @@ function roofDetails(parent,vertices,tier,color){
     }
   }
 }
+function timberBeam(parent,a,b,width,color){
+  const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),delta=end.clone().sub(start);
+  if(delta.length()<.001)return;
+  const beam=new THREE.Mesh(new THREE.BoxGeometry(width,delta.length(),width),material(color));
+  beam.position.copy(start).add(end).multiplyScalar(.5);beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());beam.castShadow=true;beam.receiveShadow=true;parent.add(beam);
+}
 function roof(parent,x,y,z,color){
   const form=roofForms.get(key(x,y,z));if(!form)return;
   const top=y+1;
@@ -162,7 +168,8 @@ function roof(parent,x,y,z,color){
     if(normal.y<0)[b,c]=[c,b];vertices.push(...a,...b,...c);
   }
   if(form.kind==='hip'){
-    const corners=[[x-.53,top,z-.53],[x+.53,top,z-.53],[x+.53,top,z+.53],[x-.53,top,z+.53]];
+    const overhang=estate?.64:.53;
+    const corners=[[x-overhang,top,z-overhang],[x+overhang,top,z-overhang],[x+overhang,top,z+overhang],[x-overhang,top,z+overhang]];
     for(let i=0;i<4;i++)triangle(corners[i],corners[(i+1)%4],[x,top+.48*rise,z]);
   }else if(form.kind==='joined'){
     const step=.25;
@@ -174,16 +181,29 @@ function roof(parent,x,y,z,color){
     }
   }else{
     const cross=form.axis==='x'?z:x,along=form.axis==='x'?x:z;
-    const cuts=[cross-.5,...(form.ridge>cross-.5&&form.ridge<cross+.5?[form.ridge]:[]),cross+.5];
+    const outerLow=estate&&cross-.5===form.lo?.14:0,outerHigh=estate&&cross+.5===form.hi?.14:0;
+    const cuts=[cross-.5-outerLow,...(form.ridge>cross-.5&&form.ridge<cross+.5?[form.ridge]:[]),cross+.5+outerHigh];
     const height=c=>top+Math.max(0,1-Math.abs(c-form.ridge)/((form.hi-form.lo)/2))*form.height*rise;
     const point=(a,c,h=height(c))=>form.axis==='x'?[a,h,c]:[c,h,a];
     for(let i=0;i<cuts.length-1;i++){
-      const c=cuts[i],d=cuts[i+1],a=point(along-.5,c),b=point(along+.5,c),e=point(along+.5,d),f=point(along-.5,d);
+      const startOver=estate&&!blocks[key(x-(form.axis==='x'?1:0),y,z-(form.axis==='z'?1:0))]?.14:0;
+      const endOver=estate&&!blocks[key(x+(form.axis==='x'?1:0),y,z+(form.axis==='z'?1:0))]?.14:0;
+      const c=cuts[i],d=cuts[i+1],a=point(along-.5-startOver,c),b=point(along+.5+endOver,c),e=point(along+.5+endOver,d),f=point(along-.5-startOver,d);
       triangle(a,b,e);triangle(a,e,f);
       for(const side of [-1,1]){
         const nx=x+(form.axis==='x'?side:0),nz=z+(form.axis==='z'?side:0);
         if(roofForms.get(key(nx,y,nz))===form)continue;
-        const edge=along+side*.5;triangle(point(edge,c,top),point(edge,c),point(edge,d));triangle(point(edge,c,top),point(edge,d),point(edge,d,top));
+        const edge=along+side*.5;
+        if(estate){
+          const wood=timber[blocks[key(x,y,z)].wood],front=edge+side*.018;
+          timberBeam(parent,point(front,c),point(front,d),.065,wood);
+          timberBeam(parent,point(front,Math.max(c,cross-.5),top+.025),point(front,Math.min(d,cross+.5),top+.025),.07,wood);
+          for(let t=Math.max(c,cross-.5)+.06;t<Math.min(d,cross+.5);t+=.13)timberBeam(parent,point(front,t,top+.04),point(front,t,height(t)-.025),.025,wood);
+          if(form.ridge>=c&&form.ridge<=d)timberBeam(parent,point(front,form.ridge,top),point(front,form.ridge),.065,wood);
+          const mid=(Math.max(c,cross-.5)+Math.min(d,cross+.5))/2;
+          timberBeam(parent,point(front,mid,top+.04),point(front,(mid+form.ridge)/2),.045,wood);
+        }
+        triangle(point(edge,c,top),point(edge,c),point(edge,d));triangle(point(edge,c,top),point(edge,d),point(edge,d,top));
       }
     }
   }
@@ -203,7 +223,11 @@ function roof(parent,x,y,z,color){
     box(parent,.16,.6,.18,x+.24,top+.42,z+.16,'#afa78f');
     box(parent,.22,.07,.24,x+.24,top+.75,z+.16,'#d9d0b5');
   }
-  for(const [dx,,dz]of directions)if(!blocks[key(x+dx,y,z+dz)])box(parent,dx?.055:1,.065,dz?.055:1,x+dx*.5,top,z+dz*.5,'#8e7955');
+  for(const [dx,,dz]of directions)if(!blocks[key(x+dx,y,z+dz)]){
+    const deep=estate&&form.kind!=='joined';
+    box(parent,dx?(deep?.22:.055):1,.065,dz?(deep?.22:.055):1,x+dx*(deep?.55:.5),top-.025,z+dz*(deep?.55:.5),timber[blocks[key(x,y,z)].wood]);
+    if(deep)for(const offset of [-.32,.32])timberBeam(parent,[x+dx*.49+dz*offset,top-.23,z+dz*.49+dx*offset],[x+dx*.61+dz*offset,top-.04,z+dz*.61+dx*offset],.045,'#826341');
+  }
 }
 function railing(parent,x,y,z,dx,dz,color){
   const g=new THREE.Group();g.position.set(x+dx*.46,y+.12,z+dz*.46);g.rotation.y=dx?Math.PI/2:0;parent.add(g);
@@ -467,7 +491,7 @@ function rebuild(){
       const tier=architecture.get(k).tier,estate=tier==='estate',lodge=tier==='lodge';
       const lookout=lookouts.has(k);
       if(lookout)lookoutRoom(buildings,x,y,z,b);
-      const wall=estate?(y===0?'#b6ad94':'#e0d4b7'):timber[b.wood];if(!lookout)box(buildings,1,1-base,1,x,y+base+(1-base)/2,z,wall);
+      const wall=estate?(y===0?'#b6ad94':timber[b.wood]):timber[b.wood];if(!lookout)box(buildings,1,1-base,1,x,y+base+(1-base)/2,z,wall);
       if(wetBase){
         for(const dx of [-.37,.37])for(const dz of [-.37,.37])box(buildings,.1,.28,.1,x+dx,.14,z+dz,'#817057');
         box(buildings,1.08,.08,1.08,x,.26,z,'#ac916a');
@@ -490,6 +514,7 @@ function rebuild(){
             log.rotation.z=Math.PI/2;log.position.set(0,h,.008);log.castShadow=true;face.add(log);
           }
         }else if(estate){
+          if(y>0)for(let i=-4;i<=4;i++)box(face,.012,.88,.012,i*.11,.5,.008,'#8d7554');
           // Light cornices belong at roof edges, rather than framing every room.
           if(!blocks[key(x,y+1,z)])box(face,1,.045,.065,0,.96,.018,'#eaddc2');
           if(y===0)box(face,1,.07,.055,0,.07,.015,'#a79a7e');

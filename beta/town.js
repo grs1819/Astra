@@ -19,6 +19,7 @@ export function normalize(data, legacy=false) {
     for(let i=0;i<floors;i++) if(inside(x,y+i,z) && (['house','balcony'].includes(b.type)||y+i===0)) {
       blocks[key(x,y+i,z)]={type:b.type,wood:['oak','birch','cedar'].includes(b.wood)?b.wood:'oak',roof:['moss','clay','slate'].includes(b.roof)?b.roof:'moss'};
       if(b.type==='house'&&ROLES.includes(b.role)&&b.role!=='home')blocks[key(x,y+i,z)].role=b.role;
+      if(b.type==='balcony'&&['pergola','roofed'].includes(b.cover))blocks[key(x,y+i,z)].cover=b.cover;
       if(b.type==='path')blocks[key(x,y+i,z)].surface=b.surface==='cobble'?'cobble':'gravel';
       if(b.type==='tree')blocks[key(x,y+i,z)].species=TREE_TYPES.includes(b.species)?b.species:'pine';
       if(b.type==='camp')blocks[key(x,y+i,z)].stage=Math.max(1,Math.min(3,Math.trunc(Number(b.stage)||1)));
@@ -197,4 +198,20 @@ export function entrancePlan(blocks,water={}){
     if(candidates.length){const p=candidates[0];result.set(p.k,p);}
   }
   return result;
+}
+
+export function deckCoverPlan(blocks){
+ const pending=new Set(Object.keys(blocks).filter(k=>blocks[k].type==='balcony'&&['pergola','roofed'].includes(blocks[k].cover)&&!blocks[key(...k.split(',').map((v,i)=>Number(v)+(i===1?1:0)))]).sort()),plan=new Map();
+ while(pending.size){
+  const first=pending.values().next().value,tiles=[first],cover=blocks[first].cover;pending.delete(first);
+  for(let i=0;i<tiles.length;i++){
+   const [x,y,z]=tiles[i].split(',').map(Number);
+   for(const [dx,,dz]of directions){const n=key(x+dx,y,z+dz);if(pending.has(n)&&blocks[n].cover===cover){pending.delete(n);tiles.push(n);}}
+  }
+  const coords=tiles.map(k=>k.split(',').map(Number)),xs=coords.map(p=>p[0]),zs=coords.map(p=>p[2]);
+  let wall=null;for(const [x,y,z]of coords)for(const [dx,,dz]of directions)if(!wall&&blocks[key(x+dx,y,z+dz)]?.type==='house')wall=[dx,dz];
+  const form={tiles,cover,wall,minX:Math.min(...xs)-.5,maxX:Math.max(...xs)+.5,minZ:Math.min(...zs)-.5,maxZ:Math.max(...zs)+.5};
+  for(const k of tiles)plan.set(k,form);
+ }
+ return plan;
 }

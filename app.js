@@ -4,7 +4,7 @@ import {waterKey,waterEdit} from './water.js';
 import {createWaterView} from './water-view.js';
 import {pathLinks,dockOpen,pathOutline} from './navigation.js';
 import {createVillagers} from './villagers.js';
-import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp, campsitePlan, lookoutPlan, entrancePlan, joinedRoofHeight} from './town.js';
+import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp, campsitePlan, lookoutPlan, entrancePlan, joinedRoofHeight, deckCoverPlan} from './town.js';
 
 const $=s=>document.querySelector(s);
 const canvas=$('#world');
@@ -139,6 +139,12 @@ function roofDetails(parent,vertices,tier,color){
     }
   }
 }
+function timberBeam(parent,a,b,width,color){
+  const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),delta=end.clone().sub(start);
+  if(delta.length()<.001)return;
+  const beam=new THREE.Mesh(new THREE.BoxGeometry(width,delta.length(),width),material(color));
+  beam.position.copy(start).add(end).multiplyScalar(.5);beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());beam.castShadow=true;beam.receiveShadow=true;parent.add(beam);
+}
 function roof(parent,x,y,z,color){
   const form=roofForms.get(key(x,y,z));if(!form)return;
   const top=y+1;
@@ -146,14 +152,8 @@ function roof(parent,x,y,z,color){
   const estate=tier==='estate';
   const rise=estate?1.35:1;
   if(form.kind==='terrace'){
-    const deck=box(parent,1,.08,1,x,top+.04,z,'#bba47d');
+    const deck=timberDeck(parent,x,top,z,blocks[key(x,y,z)].wood,true);
     deck.userData={position:[x,y,z],normal:[0,1,0]};targets.push(deck);
-    for(let i=-2;i<=2;i++)box(parent,.016,.012,.98,x+i*.19,top+.085,z,'#967c56');
-    for(const [dx,,dz]of directions){
-      const neighbor=roofForms.get(key(x+dx,y,z+dz));
-      if(blocks[key(x+dx,y+1,z+dz)]||neighbor?.kind==='terrace')continue;
-      railing(parent,x,top-.03,z,dx,dz,'#897553');
-    }
     return;
   }
   const vertices=[];
@@ -162,7 +162,8 @@ function roof(parent,x,y,z,color){
     if(normal.y<0)[b,c]=[c,b];vertices.push(...a,...b,...c);
   }
   if(form.kind==='hip'){
-    const corners=[[x-.53,top,z-.53],[x+.53,top,z-.53],[x+.53,top,z+.53],[x-.53,top,z+.53]];
+    const overhang=estate?.64:.53;
+    const corners=[[x-overhang,top,z-overhang],[x+overhang,top,z-overhang],[x+overhang,top,z+overhang],[x-overhang,top,z+overhang]];
     for(let i=0;i<4;i++)triangle(corners[i],corners[(i+1)%4],[x,top+.48*rise,z]);
   }else if(form.kind==='joined'){
     const step=.25;
@@ -174,16 +175,29 @@ function roof(parent,x,y,z,color){
     }
   }else{
     const cross=form.axis==='x'?z:x,along=form.axis==='x'?x:z;
-    const cuts=[cross-.5,...(form.ridge>cross-.5&&form.ridge<cross+.5?[form.ridge]:[]),cross+.5];
+    const outerLow=estate&&cross-.5===form.lo?.14:0,outerHigh=estate&&cross+.5===form.hi?.14:0;
+    const cuts=[cross-.5-outerLow,...(form.ridge>cross-.5&&form.ridge<cross+.5?[form.ridge]:[]),cross+.5+outerHigh];
     const height=c=>top+Math.max(0,1-Math.abs(c-form.ridge)/((form.hi-form.lo)/2))*form.height*rise;
     const point=(a,c,h=height(c))=>form.axis==='x'?[a,h,c]:[c,h,a];
     for(let i=0;i<cuts.length-1;i++){
-      const c=cuts[i],d=cuts[i+1],a=point(along-.5,c),b=point(along+.5,c),e=point(along+.5,d),f=point(along-.5,d);
+      const startOver=estate&&!blocks[key(x-(form.axis==='x'?1:0),y,z-(form.axis==='z'?1:0))]?.14:0;
+      const endOver=estate&&!blocks[key(x+(form.axis==='x'?1:0),y,z+(form.axis==='z'?1:0))]?.14:0;
+      const c=cuts[i],d=cuts[i+1],a=point(along-.5-startOver,c),b=point(along+.5+endOver,c),e=point(along+.5+endOver,d),f=point(along-.5-startOver,d);
       triangle(a,b,e);triangle(a,e,f);
       for(const side of [-1,1]){
         const nx=x+(form.axis==='x'?side:0),nz=z+(form.axis==='z'?side:0);
         if(roofForms.get(key(nx,y,nz))===form)continue;
-        const edge=along+side*.5;triangle(point(edge,c,top),point(edge,c),point(edge,d));triangle(point(edge,c,top),point(edge,d),point(edge,d,top));
+        const edge=along+side*.5;
+        if(estate){
+          const wood=timber[blocks[key(x,y,z)].wood],front=edge+side*.018;
+          timberBeam(parent,point(front,c),point(front,d),.065,wood);
+          timberBeam(parent,point(front,Math.max(c,cross-.5),top+.025),point(front,Math.min(d,cross+.5),top+.025),.07,wood);
+          for(let t=Math.max(c,cross-.5)+.06;t<Math.min(d,cross+.5);t+=.13)timberBeam(parent,point(front,t,top+.04),point(front,t,height(t)-.025),.025,wood);
+          if(form.ridge>=c&&form.ridge<=d)timberBeam(parent,point(front,form.ridge,top),point(front,form.ridge),.065,wood);
+          const mid=(Math.max(c,cross-.5)+Math.min(d,cross+.5))/2;
+          timberBeam(parent,point(front,mid,top+.04),point(front,(mid+form.ridge)/2),.045,wood);
+        }
+        triangle(point(edge,c,top),point(edge,c),point(edge,d));triangle(point(edge,c,top),point(edge,d),point(edge,d,top));
       }
     }
   }
@@ -203,12 +217,89 @@ function roof(parent,x,y,z,color){
     box(parent,.16,.6,.18,x+.24,top+.42,z+.16,'#afa78f');
     box(parent,.22,.07,.24,x+.24,top+.75,z+.16,'#d9d0b5');
   }
-  for(const [dx,,dz]of directions)if(!blocks[key(x+dx,y,z+dz)])box(parent,dx?.055:1,.065,dz?.055:1,x+dx*.5,top,z+dz*.5,'#8e7955');
+  for(const [dx,,dz]of directions)if(!blocks[key(x+dx,y,z+dz)]){
+    const deep=estate&&form.kind!=='joined';
+    box(parent,dx?(deep?.22:.055):1,.065,dz?(deep?.22:.055):1,x+dx*(deep?.55:.5),top-.025,z+dz*(deep?.55:.5),timber[blocks[key(x,y,z)].wood]);
+    if(deep)for(const offset of [-.32,.32])timberBeam(parent,[x+dx*.49+dz*offset,top-.23,z+dz*.49+dx*offset],[x+dx*.61+dz*offset,top-.04,z+dz*.61+dx*offset],.045,'#826341');
+  }
 }
 function railing(parent,x,y,z,dx,dz,color){
   const g=new THREE.Group();g.position.set(x+dx*.46,y+.12,z+dz*.46);g.rotation.y=dx?Math.PI/2:0;parent.add(g);
   box(g,.97,.055,.055,0,.39,0,color);
   for(let i=-2;i<=2;i++)box(g,.045,.39,.045,i*.21,.2,0,color);
+}
+let deckCovers=new Map();
+function coveredDeck(parent,x,y,z,b){
+  const form=deckCovers.get(key(x,y,z));if(!form)return;
+  const wood=timber[b.wood],axis=form.maxX-form.minX>=form.maxZ-form.minZ?'x':'z';
+  const lo=axis==='x'?form.minZ:form.minX,hi=axis==='x'?form.maxZ:form.maxX,ridge=(lo+hi)/2;
+  function height(a,c){
+    if(form.cover==='pergola')return y+.98;
+    if(form.wall){const [dx,dz]=form.wall;const t=dx?(a-form.minX)/(form.maxX-form.minX):(c-form.minZ)/(form.maxZ-form.minZ);return y+.92+.25*((dx||dz)>0?t:1-t);}
+    const cross=axis==='x'?c:a;return y+.94+.32*(1-Math.abs(cross-ridge)/((hi-lo)/2));
+  }
+  const joined=(dx,dz)=>deckCovers.get(key(x+dx,y,z+dz))===form;
+  for(const [dx,,dz]of directions){
+    if(joined(dx,dz)||blocks[key(x+dx,y,z+dz)]?.type==='house')continue;
+    const a=[x+dx*.49-dz*.49,0,z+dz*.49+dx*.49],c=[x+dx*.49+dz*.49,0,z+dz*.49-dx*.49];
+    a[1]=height(a[0],a[2]);c[1]=height(c[0],c[2]);timberBeam(parent,a,c,.065,wood);
+    // Perimeter posts only; adjoining covered rooms stay open inside.
+    for(const end of [a,c]){timberBeam(parent,[end[0],y+.145,end[2]],end,.065,wood);const toward=[(end[0]+x)/2,height((end[0]+x)/2,(end[2]+z)/2)-.065,(end[2]+z)/2];timberBeam(parent,[end[0],end[1]-.22,end[2]],toward,.045,wood);}
+  }
+  if(form.cover==='pergola'){
+    for(let i=-2;i<=2;i++)box(parent,.045,.07,1,x+i*.2,y+.99,z,wood);
+    return;
+  }
+  const cross=axis==='x'?z:x,along=axis==='x'?x:z;
+  const cuts=[cross-.5,...(!form.wall&&ridge>cross-.5&&ridge<cross+.5?[ridge]:[]),cross+.5],vertices=[];
+  const point=(a,c)=>axis==='x'?[a,height(a,c),c]:[c,height(c,a),a];
+  for(let i=0;i<cuts.length-1;i++){
+    const a=point(along-.5,cuts[i]),c=point(along+.5,cuts[i]),d=point(along+.5,cuts[i+1]),e=point(along-.5,cuts[i+1]);vertices.push(...a,...c,...d,...a,...d,...e);
+  }
+  // Use the attached building's current color and progression for the whole canopy.
+  const source=blocks[form.attachedHouse]||b,tier=architecture.get(form.attachedHouse)?.tier||'lodge',color=roofs[source.roof];
+  // Roof details require upward-facing triangles.
+  for(let i=0;i<vertices.length;i+=9){
+    const a=new THREE.Vector3(...vertices.slice(i,i+3)),c=new THREE.Vector3(...vertices.slice(i+3,i+6)),d=new THREE.Vector3(...vertices.slice(i+6,i+9));
+    if(c.sub(a).cross(d.sub(a)).y<0){const swap=vertices.slice(i+3,i+6);vertices.splice(i+3,3,...vertices.slice(i+6,i+9));vertices.splice(i+6,3,...swap);}
+  }
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();const mat=roofingMaterial(color,tier);
+  roofDetails(parent,vertices,tier,color);
+  const canopy=new THREE.Mesh(geometry,mat);canopy.castShadow=true;canopy.receiveShadow=true;parent.add(canopy);
+  canopy.userData={position:[x,y,z],normal:[0,1,0]};targets.push(canopy);
+  // Rafters follow the roof slope and stay visible from below.
+  for(const side of [-.42,.42])for(let i=0;i<cuts.length-1;i++){const a=point(along+side,cuts[i]),c=point(along+side,cuts[i+1]);a[1]-=.025;c[1]-=.025;timberBeam(parent,a,c,.045,wood);}
+}
+function timberDeck(parent,x,y,z,wood,terrace=false){
+  const color=timber[wood]||timber.oak,base=terrace?.08:.12;
+  const deck=box(parent,1,base,1,x,y+base/2,z,color);
+  for(let i=-2;i<=2;i++)box(parent,.19,.025,1,x+i*.2,y+base+.0125,z,color);
+  const joined=(dx,dz)=>['house','balcony'].includes(blocks[key(x+dx,y,z+dz)]?.type)||(terrace&&roofForms.get(key(x+dx,y-1,z+dz))?.kind==='terrace');
+  for(const [dx,,dz]of directions){
+    if(joined(dx,dz))continue;
+    box(parent,dx?.07:1,.12,dz?.07:1,x+dx*.47,y+.025,z+dz*.47,color);
+    const opening=y===0&&(dz===1||blocks[key(x+dx,0,z+dz)]?.type==='path');
+    if(!opening){
+      const edge=new THREE.Group();edge.position.set(x+dx*.46,y+base,z+dz*.46);edge.rotation.y=dx?Math.PI/2:0;parent.add(edge);
+      for(const side of [-1,1]){box(edge,.065,.43,.065,side*.45,.215,0,color);box(edge,.085,.025,.085,side*.45,.44,0,color);}
+      box(edge,.98,.055,.075,0,.4,0,color);
+      for(let i=-2;i<=2;i++)box(edge,.018,.32,.018,i*.14,.2,0,'#4f5850');
+    }
+    if(y===0&&dz===1&&!blocks[key(x,0,z+1)]&&!water[waterKey(x,z+1)]&&z<LIMIT)box(parent,.66,.065,.17,x,.0325,z+.55,color);
+  }
+  if(!terrace&&y>0&&!blocks[key(x,y-1,z)]){
+    for(const [dx,,dz]of directions)if(blocks[key(x+dx,y,z+dz)]?.type==='house'){
+      for(const offset of [-.32,.32]){
+        const start=[x+dx*.48+dz*offset,y-.45,z+dz*.48+dx*offset],end=[x-dx*.25+dz*offset,y+.015,z-dz*.25+dx*offset];
+        timberBeam(parent,start,end,.065,color);
+      }
+    }
+  }
+  if(!terrace&&blocks[key(x,y+1,z)]?.type==='house')for(const [dx,dz]of [[-.43,.43],[.43,.43]]){
+    box(parent,.065,1-base,.065,x+dx,y+base+(1-base)/2,z+dz,color);
+    timberBeam(parent,[x+dx,y+.7,z+dz],[x+dx*.35,y+.98,z+dz],.045,color);
+  }
+  return deck;
 }
 function arch(parent,x,y,z,axis,color){
   const shape=new THREE.Shape();shape.moveTo(-.5,1);shape.lineTo(.5,1);shape.lineTo(.5,.05);
@@ -435,6 +526,7 @@ function rebuild(){
   architecture=architecturePlan(blocks);
   lookouts=lookoutPlan(blocks);
   const camps=campsitePlan(blocks);
+  deckCovers=deckCoverPlan(blocks);
   const entrances=entrancePlan(blocks,water);
   const buildingFronts=new Map();
   for(const [id,entry]of entrances)buildingFronts.set(architecture.get(id),entry);
@@ -467,7 +559,7 @@ function rebuild(){
       const tier=architecture.get(k).tier,estate=tier==='estate',lodge=tier==='lodge';
       const lookout=lookouts.has(k);
       if(lookout)lookoutRoom(buildings,x,y,z,b);
-      const wall=estate?(y===0?'#b6ad94':'#e0d4b7'):timber[b.wood];if(!lookout)box(buildings,1,1-base,1,x,y+base+(1-base)/2,z,wall);
+      const wall=estate?(y===0?'#b6ad94':timber[b.wood]):timber[b.wood];if(!lookout)box(buildings,1,1-base,1,x,y+base+(1-base)/2,z,wall);
       if(wetBase){
         for(const dx of [-.37,.37])for(const dz of [-.37,.37])box(buildings,.1,.28,.1,x+dx,.14,z+dz,'#817057');
         box(buildings,1.08,.08,1.08,x,.26,z,'#ac916a');
@@ -490,6 +582,7 @@ function rebuild(){
             log.rotation.z=Math.PI/2;log.position.set(0,h,.008);log.castShadow=true;face.add(log);
           }
         }else if(estate){
+          if(y>0)for(let i=-4;i<=4;i++)box(face,.012,.88,.012,i*.11,.5,.008,'#8d7554');
           // Light cornices belong at roof edges, rather than framing every room.
           if(!blocks[key(x,y+1,z)])box(face,1,.045,.065,0,.96,.018,'#eaddc2');
           if(y===0)box(face,1,.07,.055,0,.07,.015,'#a79a7e');
@@ -545,9 +638,8 @@ function rebuild(){
       const axis=archAxis(blocks,x,y,z);if(axis)arch(buildings,x,y,z,axis,'#b5ad89');
     }
     if(b.type==='balcony'){
-      box(buildings,1,.12,1,x,y+.06,z,timber[b.wood]);
-      for(let i=-2;i<=2;i++)box(buildings,.018,.015,.96,x+i*.19,y+.125,z,'#92784f');
-      for(const [dx,,dz]of directions)if(!['house','balcony'].includes(blocks[key(x+dx,y,z+dz)]?.type))railing(buildings,x,y,z,dx,dz,'#866e4d');
+      timberDeck(buildings,x,y,z,b.wood);
+      coveredDeck(buildings,x,y,z,b);
     }
     const proxy=new THREE.Mesh(new THREE.BoxGeometry(1,['house','camp'].includes(b.type)?1:b.type==='tree'?(treeHeights[b.species]||2.5):b.type==='path'&&water[waterKey(x,z)]?.45:.15,1),invisible);
     proxy.position.set(x,y+(['house','camp'].includes(b.type)?.5:b.type==='tree'?(treeHeights[b.species]||2.5)/2:b.type==='path'&&water[waterKey(x,z)]?.225:.075),z);proxy.userData={position:[x,y,z]};buildings.add(proxy);targets.push(proxy);
@@ -588,11 +680,12 @@ function edit(hit,remove=false,paint=false){
   }
   if(tool==='role'){const next=assignRole(blocks,key(...hit.position),$('#building-role').value);if(next){commit(next);notify('Building purpose updated. Connect paths to welcome visitors.');}else notify('Choose an existing building.');return;}
   if(tool==='camp'&&!hit.ground&&blocks[key(...hit.position)]?.type==='camp'){const next=upgradeCamp(blocks,key(...hit.position));if(next){commit(next);notify(next[key(...hit.position)].stage===2?'A proper tent, ready for adventure.':'Your glamping retreat is ready.');}else notify('This campsite is fully upgraded.');return;}
+  if(tool==='balcony'&&!hit.ground&&blocks[key(...hit.position)]?.type==='balcony'){const next=structuredClone(blocks);next[key(...hit.position)]={...next[key(...hit.position)],cover:$('#deck-cover').value,wood:$('#wood').value,roof:$('#roof').value};commit(next);return;}
   if(tool==='path'&&!hit.ground&&blocks[key(...hit.position)]?.type==='path'){const next=structuredClone(blocks);next[key(...hit.position)].surface=$('#path-surface').value;commit(next);return;}
   if(paint&&!hit.ground){const k=key(...hit.position);if(['house','balcony'].includes(blocks[k]?.type)){const next=structuredClone(blocks);next[k]={...next[k],wood:$('#wood').value,roof:$('#roof').value};commit(next);}return;}
   const p=destination(hit);
   if(!p||!canPlace(blocks,...p,tool,water)){notify(tool==='tree'?'Trees need open, dry ground.':'Choose open ground, a roof, or an exposed wall. Build up to 8 floors.');return;}
-  const next=structuredClone(blocks);next[key(...p)]={type:tool,wood:$('#wood').value,roof:$('#roof').value};if(tool==='path')next[key(...p)].surface=$('#path-surface').value;if(tool==='tree')next[key(...p)].species=$('#tree-species').value;if(tool==='camp')next[key(...p)].stage=1;if(tool==='house'&&!hit.ground&&blocks[key(...hit.position)]?.role)next[key(...p)].role=blocks[key(...hit.position)].role;commit(next);
+  const next=structuredClone(blocks);next[key(...p)]={type:tool,wood:$('#wood').value,roof:$('#roof').value};if(tool==='balcony')next[key(...p)].cover=$('#deck-cover').value;if(tool==='path')next[key(...p)].surface=$('#path-surface').value;if(tool==='tree')next[key(...p)].species=$('#tree-species').value;if(tool==='camp')next[key(...p)].stage=1;if(tool==='house'&&!hit.ground&&blocks[key(...hit.position)]?.role)next[key(...p)].role=blocks[key(...hit.position)].role;commit(next);
 }
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
 function pick(e){const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...targets,ground],false);for(const hit of hits){if(hit.object===ground){const x=Math.round(hit.point.x),z=Math.round(hit.point.z);return Math.abs(x)<=LIMIT&&Math.abs(z)<=LIMIT?{position:[x,0,z],normal:[0,1,0],ground:true}:null;}return {position:hit.object.userData.position,normal:hit.object.userData.normal||hit.face.normal.toArray().map(Math.round),ground:false};}return null;}
@@ -664,7 +757,7 @@ canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('pointerleave',()=>ghost.visible=false);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=['water','role','camp','tree','path'].includes(value);$('#role-options').hidden=value!=='role';$('#tree-options').hidden=value!=='tree';$('#path-options').hidden=value!=='path';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
+function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=['water','role','camp','tree','path'].includes(value);$('#role-options').hidden=value!=='role';$('#tree-options').hidden=value!=='tree';$('#path-options').hidden=value!=='path';$('#deck-options').hidden=value!=='balcony';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>selectTool(b.dataset.tool));
 $('#undo').onclick=undo;
 const dock=$('.dock'), dockMenu=$('#build-menu'), dockToggle=$('#dock-toggle');

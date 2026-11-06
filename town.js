@@ -221,3 +221,25 @@ export function deckCoverPlan(blocks){
  }
  return plan;
 }
+
+// All touching porch tiles share an attachment, regardless of cover style.
+export function porchFinishPlan(blocks){
+ const pending=new Set(Object.keys(blocks).filter(k=>blocks[k].type==='balcony').sort()),plan=new Map(),architecture=architecturePlan(blocks);
+ while(pending.size){
+  const first=pending.values().next().value,tiles=[first];pending.delete(first);
+  let attached=null;
+  for(let i=0;i<tiles.length;i++){
+   const [x,y,z]=tiles[i].split(',').map(Number);
+   for(const [dx,,dz]of directions){
+    const n=key(x+dx,y,z+dz);
+    if(pending.delete(n))tiles.push(n);
+    if(!attached&&blocks[n]?.type==='house')attached=n;
+   }
+  }
+  let roofSource=attached;
+  if(attached){const [x,y,z]=attached.split(',').map(Number);let top=y;while(blocks[key(x,top+1,z)]?.type==='house')top++;roofSource=key(x,top,z);}
+  const finish={wood:attached?blocks[attached].wood:'oak',roof:roofSource?blocks[roofSource].roof:'moss',tier:architecture.get(attached)?.tier||'cottage'};
+  for(const tile of tiles)plan.set(tile,finish);
+ }
+ return plan;
+}

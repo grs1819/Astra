@@ -150,3 +150,15 @@ test('connected deck roofs follow the top of their attached wall and detach clea
  assert.equal(architecturePlan(b).get(form.attachedHouse).tier,'cottage');
  delete b['0,0,-1'];assert.equal(deckCoverPlan(b).get('1,0,0').attachedHouse,null);
 });
+
+test('porches inherit finishes across open and covered tiles and update on attachment changes',async()=>{
+ const {porchFinishPlan}=await import('../town.js');
+ const b={'0,0,0':{type:'balcony',wood:'birch'},'1,0,0':{type:'balcony',cover:'roofed'},'0,0,-1':{...house,wood:'cedar',roof:'clay'},'0,1,-1':{...house,roof:'slate'}};
+ let plan=porchFinishPlan(b);
+ assert.deepEqual(plan.get('1,0,0'),{wood:'cedar',roof:'slate',tier:'lodge'});
+ assert.equal(plan.get('0,0,0'),plan.get('1,0,0'));
+ delete b['0,1,-1'];b['0,0,-1'].wood='birch';
+ assert.deepEqual(porchFinishPlan(b).get('1,0,0'),{wood:'birch',roof:'clay',tier:'cottage'});
+ delete b['0,0,-1'];
+ assert.deepEqual(porchFinishPlan(b).get('1,0,0'),{wood:'oak',roof:'moss',tier:'cottage'});
+});

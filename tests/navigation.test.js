@@ -28,3 +28,17 @@ test('new obstacles remove the old route and isolated cells remain safe',()=>{
  blocks['1,0,0']={type:'house'};const graph=buildNavigation(blocks,{},true);
  assert.deepEqual(findRoute(graph,'0,0','2,0'),[]);assert.deepEqual(reachable(graph,'0,0'),['0,0']);assert.deepEqual(reachable(graph,'missing'),[]);
 });
+
+test('diagonal paths connect for walkers and cyclists without cutting solid corners',()=>{
+ const blocks={'0,0,0':{type:'path'},'1,0,1':{type:'path'},'2,0,2':{type:'path'}};
+ for(const cycling of [false,true])assert.deepEqual(findRoute(buildNavigation(blocks,{},cycling),'0,0','2,2'),['0,0','1,1','2,2']);
+ for(const type of ['house','tree','camp']){
+   blocks['1,0,0']={type};assert.equal(buildNavigation(blocks,{},true).get('0,0').neighbors.includes('1,1'),false);
+ }
+});
+test('diagonal boardwalks connect at their real deck heights and remove cleanly',()=>{
+ const blocks={'0,0,0':{type:'path'},'1,0,1':{type:'path'}};
+ const graph=buildNavigation(blocks,{'1,1':'lake'},true);
+ assert.equal(graph.get('0,0').y,.06);assert.equal(graph.get('1,1').y,.215);assert.deepEqual(findRoute(graph,'0,0','1,1'),['0,0','1,1']);
+ delete blocks['1,0,1'];assert.deepEqual(buildNavigation(blocks,{'1,1':'lake'},true).get('0,0').neighbors,[]);
+});

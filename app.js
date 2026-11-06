@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
 import {createWaterView} from './water-view.js';
+import {pathLinks,dockOpen} from './navigation.js';
 import {createVillagers} from './villagers.js';
 import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp, campsitePlan, lookoutPlan, entrancePlan, joinedRoofHeight} from './town.js';
 
@@ -359,6 +360,43 @@ function campGathering(parent,x,z,size){
   }else box(g,.38,.1,.13,0,.085,-.36,'#98744e');
 }
 
+function pathTile(parent,x,z){
+  const wet=!!water[waterKey(x,z)],top=wet?.215:.06;
+  const color=wet?'#b49a71':'#cbbb97';
+  const disk=new THREE.Mesh(new THREE.CylinderGeometry(.46,.46,wet?.12:.06,20),material(color));
+  disk.position.set(x,top-(wet?.06:.03),z);disk.receiveShadow=true;parent.add(disk);
+  disk.userData={position:[x,0,z],normal:[0,1,0]};targets.push(disk);
+  for(const [dx,dz]of pathLinks(blocks,x,z)){
+    const neighborWet=!!water[waterKey(x+dx,z+dz)],endTop=neighborWet?.215:.06;
+    // Each tile owns half the connection; both halves meet at the same height.
+    const midTop=(top+endTop)/2,run=Math.hypot(dx,dz)/2,length=Math.hypot(run,midTop-top);
+    const link=new THREE.Mesh(new THREE.BoxGeometry(.72,.055,length+.015),material(wet?'#b49a71':color));
+    link.position.set(x+dx*.25,(top+midTop)/2-.0275,z+dz*.25);
+    const forward=new THREE.Vector3(dx/2,midTop-top,dz/2).normalize();
+    link.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),forward);link.receiveShadow=true;parent.add(link);
+    link.userData={position:[x,0,z],normal:[0,1,0]};targets.push(link);
+  }
+  if(wet){
+    // Rounded wooden landings grow into continuous boardwalks and dock heads.
+    for(let i=-2;i<=2;i++){
+      const offset=i*.16,width=2*Math.sqrt(.46*.46-offset*offset);
+      box(parent,width,.012,.018,x,top+.006,z+offset,'#806c4f');
+    }
+    for(const [dx,,dz]of directions){
+      if(dockOpen(blocks,x,z,dx,dz))continue;
+      railing(parent,x,.1,z,dx,dz,'#8a7454');
+    }
+    for(const dx of [-.3,.3])for(const dz of [-.3,.3]){
+      if(pathLinks(blocks,x,z).some(([a,b])=>a===Math.sign(dx)&&b===Math.sign(dz)))continue;
+      box(parent,.065,.34,.065,x+dx,.17,z+dz,'#887254');
+      box(parent,.085,.035,.085,x+dx,.35,z+dz,'#d0b68b');
+    }
+  }else{
+    // Bring paving right up to adjoining doorways without covering their tile.
+    for(const [dx,,dz]of directions)if(blocks[key(x+dx,0,z+dz)]?.type==='house')box(parent,dx?.22:.6,.06,dz?.22:.6,x+dx*.42,.03,z+dz*.42,color);
+  }
+}
+
 function rebuild(){
   renderer.shadowMap.needsUpdate=true;
   clear(buildings);targets=[];
@@ -393,18 +431,7 @@ function rebuild(){
         }
       }
     }
-    if(b.type==='path'){
-      if(water[waterKey(x,z)]){
-        box(buildings,1,.12,1,x,.15,z,'#b49a71');
-        for(let i=-2;i<=2;i++)box(buildings,.018,.012,.97,x+i*.19,.215,z,'#806c4f');
-        for(const dx of [-.37,.37])for(const dz of [-.37,.37])box(buildings,.07,.22,.07,x+dx,.11,z+dz,'#887254');
-        const alongX=[-1,1].some(dx=>blocks[key(x+dx,0,z)]?.type==='path');
-        for(const side of [-1,1]){
-          const dx=alongX?0:side,dz=alongX?side:0;
-          if(!['path','house','balcony'].includes(blocks[key(x+dx,0,z+dz)]?.type))railing(buildings,x,.1,z,dx,dz,'#8a7454');
-        }
-      }else box(buildings,.98,.065,.98,x,.025,z,'#cbbb97');
-    }
+    if(b.type==='path')pathTile(buildings,x,z);
     if(b.type==='house'){
       const wetBase=y===0&&!!water[waterKey(x,z)],base=wetBase?.26:0;
       const tier=architecture.get(k).tier,estate=tier==='estate',lodge=tier==='lodge';

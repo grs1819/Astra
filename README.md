@@ -183,3 +183,12 @@ has been replaced by light joints, slimmer corner posts, and roof-edge cornices.
 A small roof-colored canopy marks the main entrance. Lookout glazing stays open
 and panoramic. These details derive from the connected facade and path-facing
 entrance, so they update when the building changes without modifying saved towns.
+
+### Rounded paths and waterfront connections
+Path tiles form rounded junctions with cardinal and diagonal links. Diagonals are
+blocked by solid objects on either corner tile, keeping walkers and cyclists out
+of buildings, trees, and camps. Diagonal travel uses its actual distance. Paths on
+water become rounded timber landings with piles, deck seams, and rail openings
+that match routing. Connections slope between dry paths and raised decks. Dry
+paving extends to adjoining building edges. All geometry and routes rebuild after
+placement, removal, water edits, and undo; existing path saves require no migration.

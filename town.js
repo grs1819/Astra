@@ -79,7 +79,10 @@ export function roofPlan(blocks){
     const spanX=Math.max(...xs)-Math.min(...xs),spanZ=Math.max(...zs)-Math.min(...zs);
     const axis=spanX>=spanZ?'x':'z',cross=axis==='x'?zs:xs;
     const lo=Math.min(...cross)-.5,hi=Math.max(...cross)+.5;
-    const form={anchor:queue[0],kind:queue.length===1?'hip':'gable',axis,lo,hi,ridge:(lo+hi)/2,height:Math.min(.8,.44*(hi-lo))};
+    const rectangular=queue.length===(spanX+1)*(spanZ+1);
+    const edges=[];
+    if(!rectangular)for(const [x,y,z]of coords)for(const [dx,,dz]of directions)if(!queue.includes(key(x+dx,y,z+dz)))edges.push(dx?[x+dx*.5,z-.5,x+dx*.5,z+.5]:[x-.5,z+dz*.5,x+.5,z+dz*.5]);
+    const form={edges,anchor:queue.slice().sort()[0],kind:queue.length===1?'hip':rectangular?'gable':'joined',axis,lo,hi,ridge:(lo+hi)/2,height:Math.min(.8,.44*(hi-lo))};
     for(const k of queue)plan.set(k,form);
   }
   return plan;
@@ -158,6 +161,37 @@ export function lookoutPlan(blocks){
     if(rooms.length>2)continue;
     const supported=rooms.every(k=>{const [x,y,z]=k.split(',').map(Number);return [1,2].every(d=>blocks[key(x,y-d,z)]?.type==='house')&&!directions.some(([dx,,dz])=>blocks[key(x+dx,y+1,z+dz)]?.type==='house');});
     if(supported)for(const k of rooms)result.add(k);
+  }
+  return result;
+}
+
+// Distance to exposed eaves yields a continuous roof over concave footprints.
+export function joinedRoofHeight(form,x,z){
+  let distance=Infinity;
+  for(const [ax,az,bx,bz]of form.edges){
+    const dx=bx-ax,dz=bz-az,t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz)));
+    distance=Math.min(distance,Math.hypot(x-ax-t*dx,z-az-t*dz));
+  }
+  return Math.min(.8,distance*.88);
+}
+export function entrancePlan(blocks,water={}){
+  const architecture=architecturePlan(blocks),groups=new Map(),result=new Map();
+  for(const [k,b]of Object.entries(blocks)){
+    const [x,y,z]=k.split(',').map(Number);if(b.type!=='house'||y!==0)continue;
+    const form=architecture.get(k);if(!groups.has(form))groups.set(form,[]);groups.get(form).push([k,x,z]);
+  }
+  for(const rooms of groups.values()){
+    const cx=rooms.reduce((s,p)=>s+p[1],0)/rooms.length,cz=rooms.reduce((s,p)=>s+p[2],0)/rooms.length,candidates=[];
+    for(const [k,x,z]of rooms)for(const [dx,dz]of [[0,1],[1,0],[-1,0],[0,-1]]){
+      if(Math.abs(x+dx)>LIMIT||Math.abs(z+dz)>LIMIT)continue;
+      const neighbor=blocks[key(x+dx,0,z+dz)];
+      if(neighbor&&!['path','balcony'].includes(neighbor.type))continue;
+      if(water[waterKey(x+dx,z+dz)]&&neighbor?.type!=='path')continue;
+      const score=(neighbor?.type==='path'?100:0)+(dz===1?10:0)-Math.abs(x-cx)-Math.abs(z-cz);
+      candidates.push({k,dx,dz,score});
+    }
+    candidates.sort((a,b)=>b.score-a.score||a.k.localeCompare(b.k));
+    if(candidates.length){const p=candidates[0];result.set(p.k,p);}
   }
   return result;
 }

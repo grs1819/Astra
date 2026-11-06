@@ -151,3 +151,12 @@ panoramic glazing, a timber floor, a brass telescope and tripod, a map table,
 and a woodburning stove with a roof flue. Broad summits and unsupported upper
 extensions retain normal architecture. Growing, reshaping, removing, undoing,
 and loading a town recompute the lookout automatically without new save fields.
+
+### Connected building shapes
+Connected buildings now share a main entrance, preferring adjacent paths and
+otherwise a central front-facing position. Entrance stairs and role signs follow
+that doorway. Long facades omit internal corner posts, align log courses, and
+use wider estate windows. Rectangular roofs retain shared gables; irregular and
+L-shaped roof surfaces follow the occupied footprint, joining at shared edges
+without covering courtyard gaps. Stepped roofs retain terraces and upper doors.
+All forms recalculate after edits, removal, undo, and loading existing saves.

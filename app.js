@@ -21,7 +21,8 @@ const camera=new THREE.PerspectiveCamera(38,1,.1,140);
 const controls=new OrbitControls(camera,canvas);
 controls.enableDamping=true;
 controls.minDistance=5;controls.maxDistance=48;
-controls.minPolarAngle=.22;controls.maxPolarAngle=1.35;
+controls.minPolarAngle=.06;controls.maxPolarAngle=1.48;
+controls.screenSpacePanning=false; // Two-finger drags follow the ground plane.
 // Blender-style camera gestures; left/right buttons are reserved for edits.
 controls.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.ROTATE,RIGHT:null};
 controls.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};
@@ -513,7 +514,9 @@ function preview(hit){
   ghost.material.color.set(tool==='water'?'#77c9ce':tool==='erase'?'#d78469':'#fff5bf');
   ghost.scale.set(1,tool==='water'?.065:tool==='balcony'?.16:1,1);
 }
+const touchContacts=new Map();
 function resetPointerInteraction(){
+  touchContacts.clear();
   const id=pointerDown?.pointerId;
   pointerDown=null;ghost.visible=false;canvas.style.cursor='';
   if(id!==undefined&&canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);
@@ -526,23 +529,39 @@ canvas.addEventListener('pointerdown',e=>{
   if(e.pointerType!=='touch'&&pointerDown?.pointerId===e.pointerId)resetPointerInteraction();
 },{capture:true});
 canvas.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='touch'){
+    touchContacts.set(e.pointerId,{x:e.clientX,y:e.clientY,moved:touchContacts.size>0,time:performance.now()});
+    if(touchContacts.size>1)for(const contact of touchContacts.values())contact.moved=true;
+    canvas.setPointerCapture(e.pointerId);ghost.visible=false;return;
+  }
   if(![0,1,2].includes(e.button))return;
   if(e.button===1){e.preventDefault();canvas.style.cursor='grabbing';}
   pointerDown={pointerId:e.pointerId,x:e.clientX,y:e.clientY,button:e.button,moved:false,alt:e.altKey};
 });
 canvas.addEventListener('pointermove',e=>{
+  if(e.pointerType==='touch'){
+    const contact=touchContacts.get(e.pointerId);
+    if(contact&&Math.hypot(e.clientX-contact.x,e.clientY-contact.y)>8)contact.moved=true;
+    ghost.visible=false;return;
+  }
   if(pointerDown&&Math.hypot(e.clientX-pointerDown.x,e.clientY-pointerDown.y)>5)pointerDown.moved=true;
   // Camera drags do not need an expensive building raycast on every event.
   if(pointerDown&&(pointerDown.button===1||pointerDown.moved)){ghost.visible=false;return;}
   hoverHit=pick(e);preview(hoverHit);
 });
 canvas.addEventListener('pointerup',e=>{
+  if(e.pointerType==='touch'){
+    const contact=touchContacts.get(e.pointerId);
+    touchContacts.delete(e.pointerId);
+    if(contact&&!contact.moved&&Math.hypot(e.clientX-contact.x,e.clientY-contact.y)<=8&&performance.now()-contact.time<500)edit(pick(e));
+    ghost.visible=false;return;
+  }
   if(pointerDown?.pointerId!==e.pointerId)return;
   if(!pointerDown.moved&&pointerDown.button!==1)edit(pick(e),pointerDown.button===2,pointerDown.alt);
   pointerDown=null;ghost.visible=false;canvas.style.cursor='';
 });
-canvas.addEventListener('pointercancel',()=>{pointerDown=null;ghost.visible=false;canvas.style.cursor='';});
-canvas.addEventListener('lostpointercapture',e=>{if(pointerDown?.pointerId===e.pointerId)resetPointerInteraction();});
+canvas.addEventListener('pointercancel',e=>{touchContacts.delete(e.pointerId);for(const contact of touchContacts.values())contact.moved=true;pointerDown=null;ghost.visible=false;canvas.style.cursor='';});
+canvas.addEventListener('lostpointercapture',e=>{if(e.pointerType==='touch'){if(touchContacts.has(e.pointerId))resetPointerInteraction();return;}if(pointerDown?.pointerId===e.pointerId)resetPointerInteraction();});
 addEventListener('blur',resetPointerInteraction);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)resetPointerInteraction();});
 // Suppress native middle-button autoscroll on browsers that still dispatch it.

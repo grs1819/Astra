@@ -160,3 +160,10 @@ use wider estate windows. Rectangular roofs retain shared gables; irregular and
 L-shaped roof surfaces follow the occupied footprint, joining at shared edges
 without covering courtyard gaps. Stepped roofs retain terraces and upper doors.
 All forms recalculate after edits, removal, undo, and loading existing saves.
+
+### Mobile camera controls
+Drag one finger to orbit and tilt; drag two fingers to pan over the ground;
+pinch two fingers to zoom. A quick, stationary single-finger tap edits the town.
+Multi-touch gestures, drags, and long presses cannot place blocks. Select Remove
+for touch deletion. Mouse controls remain middle-drag orbit, Shift-middle-drag
+pan, and wheel zoom. Tilt stays above the ground while allowing a wider view.

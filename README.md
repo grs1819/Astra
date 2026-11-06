@@ -199,3 +199,10 @@ the straight raised bank strips. Connected edges remain aligned to avoid seams,
 and the depth shading uses the actual water outline. Stream and river connectors
 have subtle curved variation. Shapes are deterministic across reload and undo;
 existing water saves and grid-based docks remain compatible.
+
+Dry paths now use a crushed-stone texture on rounded-square tiles rather than
+circular pads. Water connects diagonally as well as cardinally, both in rendered
+channels and in water-body decoration counts. Cyclists choose longer trips across
+their connected path network instead of nearby turnaround points, and residents
+interpolate height along shore ramps. A browser simulation verifies a cyclist
+crosses a five-tile bridge between both dry banks.

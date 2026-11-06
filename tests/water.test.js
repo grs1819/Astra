@@ -14,10 +14,10 @@ test('decoration progresses at 4, 10, and 18 connected tiles',()=>{
     const result=analyzeWater(water);assert.equal(result.bodies.length,1);assert.equal(result.bodies[0].size,size);assert.equal(result.bodies[0].tier,tier);
   }
 });
-test('mixed water connects cardinally, not diagonally; removal splits bodies',()=>{
+test('mixed water connects cardinally and diagonally; removal splits bodies',()=>{
   const water={'0,0':'stream','1,0':'river','2,0':'lake','3,1':'lake'};
-  assert.equal(analyzeWater(water).bodies.length,2);
-  const split=waterEdit(water,{},1,0,null);assert.equal(analyzeWater(split).bodies.length,3);assert.equal(water['1,0'],'river');
+  assert.equal(analyzeWater(water).bodies.length,1);
+  const split=waterEdit(water,{},1,0,null);assert.equal(analyzeWater(split).bodies.length,2);assert.equal(water['1,0'],'river');
 });
 test('water coexists with cottages and paths; painting cannot destroy trees',()=>{
   const blocks={'0,0,0':house,'1,0,0':{type:'path'},'2,0,0':{type:'tree'}};

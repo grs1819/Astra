@@ -360,17 +360,35 @@ function campGathering(parent,x,z,size){
   }else box(g,.38,.1,.13,0,.085,-.36,'#98744e');
 }
 
+let gravelMaterial;
+function crushedStone(){
+  if(gravelMaterial)return gravelMaterial;
+  const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;
+  const ctx=canvas.getContext('2d');ctx.fillStyle='#b9b5a4';ctx.fillRect(0,0,128,128);
+  for(let i=0;i<950;i++){
+    const x=(i*73.13)%128,y=(i*i*19.73)%128;
+    ctx.fillStyle=['#a29e91','#ccc7b7','#ded8c6','#8f9087'][i%4];
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2+i%3,y+1);ctx.lineTo(x+1,y+3);ctx.closePath();ctx.fill();
+  }
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+  gravelMaterial=new THREE.MeshStandardMaterial({map:texture,roughness:1});return gravelMaterial;
+}
+function roundedPathGeometry(){
+  const shape=new THREE.Shape(),s=.48,r=.12;
+  shape.moveTo(-s+r,-s);shape.lineTo(s-r,-s);shape.quadraticCurveTo(s,-s,s,-s+r);shape.lineTo(s,s-r);shape.quadraticCurveTo(s,s,s-r,s);shape.lineTo(-s+r,s);shape.quadraticCurveTo(-s,s,-s,s-r);shape.lineTo(-s,-s+r);shape.quadraticCurveTo(-s,-s,-s+r,-s);
+  const geometry=new THREE.ExtrudeGeometry(shape,{depth:.06,bevelEnabled:false,curveSegments:5});geometry.rotateX(-Math.PI/2);return geometry;
+}
 function pathTile(parent,x,z){
   const wet=!!water[waterKey(x,z)],top=wet?.215:.06;
   const color=wet?'#b49a71':'#cbbb97';
-  const disk=new THREE.Mesh(new THREE.CylinderGeometry(.46,.46,wet?.12:.06,20),material(color));
-  disk.position.set(x,top-(wet?.06:.03),z);disk.receiveShadow=true;parent.add(disk);
+  const disk=new THREE.Mesh(wet?new THREE.CylinderGeometry(.46,.46,.12,20):roundedPathGeometry(),wet?material(color):crushedStone());
+  disk.position.set(x,wet?top-.06:0,z);disk.receiveShadow=true;parent.add(disk);
   disk.userData={position:[x,0,z],normal:[0,1,0]};targets.push(disk);
   for(const [dx,dz]of pathLinks(blocks,x,z)){
     const neighborWet=!!water[waterKey(x+dx,z+dz)],endTop=neighborWet?.215:.06;
     // Each tile owns half the connection; both halves meet at the same height.
     const midTop=(top+endTop)/2,run=Math.hypot(dx,dz)/2,length=Math.hypot(run,midTop-top);
-    const link=new THREE.Mesh(new THREE.BoxGeometry(.72,.055,length+.015),material(wet?'#b49a71':color));
+    const link=new THREE.Mesh(new THREE.BoxGeometry(.72,.055,length+.015),wet?material('#b49a71'):crushedStone());
     link.position.set(x+dx*.25,(top+midTop)/2-.0275,z+dz*.25);
     const forward=new THREE.Vector3(dx/2,midTop-top,dz/2).normalize();
     link.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),forward);link.receiveShadow=true;parent.add(link);
@@ -393,7 +411,7 @@ function pathTile(parent,x,z){
     }
   }else{
     // Bring paving right up to adjoining doorways without covering their tile.
-    for(const [dx,,dz]of directions)if(blocks[key(x+dx,0,z+dz)]?.type==='house')box(parent,dx?.22:.6,.06,dz?.22:.6,x+dx*.42,.03,z+dz*.42,color);
+    for(const [dx,,dz]of directions)if(blocks[key(x+dx,0,z+dz)]?.type==='house')box(parent,dx?.22:.6,.06,dz?.22:.6,x+dx*.42,.03,z+dz*.42,color).material=crushedStone();
   }
 }
 

@@ -192,3 +192,10 @@ water become rounded timber landings with piles, deck seams, and rail openings
 that match routing. Connections slope between dry paths and raised decks. Dry
 paving extends to adjoining building edges. All geometry and routes rebuild after
 placement, removal, water edits, and undo; existing path saves require no migration.
+
+### Softer shorelines
+Lake tiles round exposed corners and gently vary their outer shoreline, replacing
+the straight raised bank strips. Connected edges remain aligned to avoid seams,
+and the depth shading uses the actual water outline. Stream and river connectors
+have subtle curved variation. Shapes are deterministic across reload and undo;
+existing water saves and grid-based docks remain compatible.

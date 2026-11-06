@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {WATER_TYPES,waterKey,waterDirections,analyzeWater} from './water.js';
+import {WATER_TYPES,waterKey,waterDirections,analyzeWater,lakeOutline} from './water.js';
 import {LIMIT} from './town.js';
 
 // The shoreline depth field and water geometry rebuild only after edits.
@@ -124,7 +124,9 @@ export function createWaterView(scene,material,box){
       const mat=surfaces.get(type),bank=material('#b6b69a');
       const neighbors=waterDirections.filter(([dx,dz])=>water[waterKey(x+dx,z+dz)]);
       if(type==='lake'){
-        flat([[x-.5,z-.5],[x+.5,z-.5],[x+.5,z+.5],[x-.5,z+.5]],.035,mat);
+        const outline=lakeOutline(water,x,z);
+        flat(outline.map(([a,b])=>[x+(a-x)*1.045,z+(b-z)*1.045]),.012,bank);
+        flat(outline,.035,mat);
       }else{
         disk(x,z,r+.065,.012,bank);disk(x,z,r,.035,mat);
       }
@@ -135,13 +137,21 @@ export function createWaterView(scene,material,box){
       }
       // Connect unlike widths using a shared width at the tile boundary.
       for(const [dx,dz]of neighbors){
+        if(type==='lake'&&water[waterKey(x+dx,z+dz)]==='lake')continue;
         const edge=(config.width+WATER_TYPES[water[waterKey(x+dx,z+dz)]].width)/4;
-        const polygon=(extra)=>[[x-dz*(r+extra),z+dx*(r+extra)],[x+dx*.5-dz*(edge+extra),z+dz*.5+dx*(edge+extra)],[x+dx*.5+dz*(edge+extra),z+dz*.5-dx*(edge+extra)],[x+dz*(r+extra),z-dx*(r+extra)]];
+        const polygon=(extra)=>{
+          const points=[];
+          for(const side of [-1,1])for(let j=0;j<=8;j++){
+            const t=side===-1?j/8:1-j/8;
+            const width=r+(edge-r)*t+extra+Math.sin(t*Math.PI)*.018*Math.sin(x*2.1+z*3.7);
+            points.push([x+dx*.5*t+side*dz*width,z+dz*.5*t-side*dx*width]);
+          }
+          return points;
+        };
         if(type!=='lake')flat(polygon(.06),.013,bank);
         flat(polygon(0),.036,mat);
       }
       const shores=waterDirections.filter(([dx,dz])=>!water[waterKey(x+dx,z+dz)]);
-      if(type==='lake')for(const [dx,dz]of shores){box(group,dx?.065:1,.045,dz?.065:1,x+dx*.49,.035,z+dz*.49,'#b5b795');}
       const occupied=blocks[`${x},0,${z}`];
       if(!occupied){
         if(body.tier>=1&&shores.length){

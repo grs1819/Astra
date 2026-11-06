@@ -39,3 +39,23 @@ export function waterEdit(water,blocks,x,z,type,limit=9){
   if(!Object.hasOwn(WATER_TYPES,type)||['tree','camp'].includes(blocks[`${x},0,${z}`]?.type)||water[k]===type)return null;
   return {...water,[k]:type};
 }
+
+// Keep joined edges exactly on the grid; soften only exposed shoreline.
+export function lakeOutline(water,x,z){
+  const points=[];
+  for(let i=0;i<64;i++){
+    const angle=i/64*Math.PI*2,c=Math.cos(angle),s=Math.sin(angle);
+    const sx=c>=0?1:-1,sz=s>=0?1:-1;
+    const openX=!water[waterKey(x+sx,z)],openZ=!water[waterKey(x,z+sz)];
+    const exposed=Math.abs(c)>=Math.abs(s)?openX:openZ;
+    let radius=.5/Math.max(Math.abs(c),Math.abs(s));
+    if(openX&&openZ)radius=.5/Math.pow(c**4+s**4,.25);
+    if(exposed){
+      const t=Math.abs(c)>=Math.abs(s)?s/c:c/s;
+      const envelope=Math.cos(t*Math.PI/2)**2;
+      radius-=(.025+.014*Math.sin((x+c)*4.3+(z+s)*3.7)) * envelope;
+    }
+    points.push([x+c*radius,z+s*radius]);
+  }
+  return points;
+}

@@ -35,3 +35,13 @@ test('water painting rejects invalid tools, bounds, and no-op edits',()=>{
   assert.equal(waterEdit({'0,0':'stream'}, {},0,0,'stream'),null);assert.equal(waterEdit({}, {},0,0,null),null);
   assert.deepEqual(waterEdit({'0,0':'stream'}, {},0,0,'lake'),{'0,0':'lake'});assert.deepEqual(normalizeWater(null),{});
 });
+
+test('lake outlines round exposed corners, remain deterministic, and preserve joins',async()=>{
+ const {lakeOutline}=await import('../water.js');
+ const solo=lakeOutline({'0,0':'lake'},0,0);
+ assert.ok(solo[8][0]<.45&&solo[8][1]<.45);
+ assert.deepEqual(solo,lakeOutline({'0,0':'lake'},0,0));
+ const joined=lakeOutline({'0,0':'lake','1,0':'lake'},0,0);
+ assert.equal(joined[0][0],.5);
+ assert.ok(joined.every(([x,z])=>Math.abs(x)<=.500001&&Math.abs(z)<=.500001));
+});

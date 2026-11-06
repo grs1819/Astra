@@ -209,8 +209,14 @@ export function deckCoverPlan(blocks){
    for(const [dx,,dz]of directions){const n=key(x+dx,y,z+dz);if(pending.has(n)&&blocks[n].cover===cover){pending.delete(n);tiles.push(n);}}
   }
   const coords=tiles.map(k=>k.split(',').map(Number)),xs=coords.map(p=>p[0]),zs=coords.map(p=>p[2]);
-  let wall=null;for(const [x,y,z]of coords)for(const [dx,,dz]of directions)if(!wall&&blocks[key(x+dx,y,z+dz)]?.type==='house')wall=[dx,dz];
-  const form={tiles,cover,wall,minX:Math.min(...xs)-.5,maxX:Math.max(...xs)+.5,minZ:Math.min(...zs)-.5,maxZ:Math.max(...zs)+.5};
+  let wall=null,attachedHouse=null;
+  for(const [x,y,z]of coords)for(const [dx,,dz]of directions)if(!wall&&blocks[key(x+dx,y,z+dz)]?.type==='house'){
+   wall=[dx,dz];attachedHouse=key(x+dx,y,z+dz);
+   // Match the roof at the top of the attached wall, including taller buildings.
+   let top=y;while(blocks[key(x+dx,top+1,z+dz)]?.type==='house')top++;
+   attachedHouse=key(x+dx,top,z+dz);
+  }
+  const form={tiles,cover,wall,attachedHouse,minX:Math.min(...xs)-.5,maxX:Math.max(...xs)+.5,minZ:Math.min(...zs)-.5,maxZ:Math.max(...zs)+.5};
   for(const k of tiles)plan.set(k,form);
  }
  return plan;

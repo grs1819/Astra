@@ -137,3 +137,16 @@ test('deck covers persist, join matching neighbors, and defer to overhead rooms'
  b['0,1,0']=house;plan=deckCoverPlan(b);assert.equal(plan.has('0,0,0'),false);assert.equal(plan.get('1,0,0').tiles.length,1);
  delete b['0,1,0'];b['0,0,0'].cover='open';assert.equal(deckCoverPlan(b).has('0,0,0'),false);
 });
+
+test('connected deck roofs follow the top of their attached wall and detach cleanly',async()=>{
+ const {deckCoverPlan,architecturePlan}=await import('../town.js');
+ const b={'0,0,0':{type:'balcony',cover:'roofed',roof:'moss'},'1,0,0':{type:'balcony',cover:'roofed'},'0,0,-1':{...house,roof:'clay'},'0,1,-1':{...house,roof:'slate'}};
+ let form=deckCoverPlan(b).get('1,0,0');
+ assert.equal(form.attachedHouse,'0,1,-1');
+ assert.equal(b[form.attachedHouse].roof,'slate');
+ assert.equal(architecturePlan(b).get(form.attachedHouse).tier,'lodge');
+ delete b['0,1,-1'];form=deckCoverPlan(b).get('1,0,0');
+ assert.equal(b[form.attachedHouse].roof,'clay');
+ assert.equal(architecturePlan(b).get(form.attachedHouse).tier,'cottage');
+ delete b['0,0,-1'];assert.equal(deckCoverPlan(b).get('1,0,0').attachedHouse,null);
+});

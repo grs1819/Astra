@@ -19,6 +19,7 @@ export function normalize(data, legacy=false) {
     for(let i=0;i<floors;i++) if(inside(x,y+i,z) && (['house','balcony'].includes(b.type)||y+i===0)) {
       blocks[key(x,y+i,z)]={type:b.type,wood:['oak','birch','cedar'].includes(b.wood)?b.wood:'oak',roof:['moss','clay','slate'].includes(b.roof)?b.roof:'moss'};
       if(b.type==='house'&&ROLES.includes(b.role)&&b.role!=='home')blocks[key(x,y+i,z)].role=b.role;
+      if(b.type==='path')blocks[key(x,y+i,z)].surface=b.surface==='cobble'?'cobble':'gravel';
       if(b.type==='tree')blocks[key(x,y+i,z)].species=TREE_TYPES.includes(b.species)?b.species:'pine';
       if(b.type==='camp')blocks[key(x,y+i,z)].stage=Math.max(1,Math.min(3,Math.trunc(Number(b.stage)||1)));
     }

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
 import {createWaterView} from './water-view.js';
-import {pathLinks,dockOpen} from './navigation.js';
+import {pathLinks,dockOpen,pathOutline} from './navigation.js';
 import {createVillagers} from './villagers.js';
 import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp, campsitePlan, lookoutPlan, entrancePlan, joinedRoofHeight} from './town.js';
 
@@ -371,29 +371,43 @@ function crushedStone(){
     ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2+i%3,y+1);ctx.lineTo(x+1,y+3);ctx.closePath();ctx.fill();
   }
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
-  gravelMaterial=new THREE.MeshStandardMaterial({map:texture,roughness:1});return gravelMaterial;
+  gravelMaterial=new THREE.MeshStandardMaterial({map:texture,bumpMap:texture,bumpScale:.012,roughness:1});return gravelMaterial;
 }
-function roundedPathGeometry(){
-  const shape=new THREE.Shape(),s=.48,r=.12;
-  shape.moveTo(-s+r,-s);shape.lineTo(s-r,-s);shape.quadraticCurveTo(s,-s,s,-s+r);shape.lineTo(s,s-r);shape.quadraticCurveTo(s,s,s-r,s);shape.lineTo(-s+r,s);shape.quadraticCurveTo(-s,s,-s,s-r);shape.lineTo(-s,-s+r);shape.quadraticCurveTo(-s,-s,-s+r,-s);
-  const geometry=new THREE.ExtrudeGeometry(shape,{depth:.06,bevelEnabled:false,curveSegments:5});geometry.rotateX(-Math.PI/2);return geometry;
+function roundedPathGeometry(x,z){
+  const shape=new THREE.Shape();pathOutline(blocks,x,z).forEach(([a,b],i)=>i?shape.lineTo(a,-b):shape.moveTo(a,-b));shape.closePath();
+  const geometry=new THREE.ExtrudeGeometry(shape,{depth:.06,bevelEnabled:false});geometry.rotateX(-Math.PI/2);return geometry;
+}
+const stoneReliefMaterial=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1});
+function pathRelief(parent,x,z,cobble){
+  const vertices=[],normals=[],colors=[];
+  const count=cobble?36:45;
+  for(let i=0;i<count;i++){
+    const px=cobble?(i%6-2.5)/6:(rand(i+x*13,z+7)-.5)*.8;
+    const pz=cobble?(Math.floor(i/6)-2.5)/6:(rand(z+i*17,x+3)-.5)*.8;
+    const h=cobble?.016+rand(x+i,z)*.008:.008;
+    const edgeCorner=cobble&&Math.abs(px)>.4&&Math.abs(pz)>.4&&!['path','house'].includes(blocks[key(x+Math.sign(px),0,z)]?.type)&&!['path','house'].includes(blocks[key(x,0,z+Math.sign(pz))]?.type);
+    const geo=(cobble?new THREE.BoxGeometry(edgeCorner?.09:.15,h,edgeCorner?.09:.15):new THREE.IcosahedronGeometry(.012+rand(i,z)*.008,0)).toNonIndexed();
+    geo.translate(x+px,.1+h/2,z+pz);
+    const color=new THREE.Color(cobble?['#c8b28c','#d5c09c','#bfa780','#dac8aa'][i%4]:['#a8a596','#c5c0ad','#989b92'][i%3]);
+    vertices.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);
+    for(let n=0;n<geo.attributes.position.count;n++)colors.push(color.r,color.g,color.b);geo.dispose();
+  }
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+  const mesh=new THREE.Mesh(geo,stoneReliefMaterial);mesh.receiveShadow=true;mesh.castShadow=true;parent.add(mesh);
 }
 function pathTile(parent,x,z){
-  const wet=!!water[waterKey(x,z)],top=wet?.215:.06;
-  const color=wet?'#b49a71':'#cbbb97';
-  const disk=new THREE.Mesh(wet?new THREE.CylinderGeometry(.46,.46,.12,20):roundedPathGeometry(),wet?material(color):crushedStone());
-  disk.position.set(x,wet?top-.06:0,z);disk.receiveShadow=true;parent.add(disk);
+  const wet=!!water[waterKey(x,z)],top=.1,cobble=blocks[key(x,0,z)]?.surface==='cobble';
+  const color=wet?'#b49a71':'#a89577',surface=wet?material(color):cobble?material(color):crushedStone();
+  const disk=new THREE.Mesh(roundedPathGeometry(x,z),surface);
+  disk.position.set(x,.04,z);disk.receiveShadow=true;parent.add(disk);
   disk.userData={position:[x,0,z],normal:[0,1,0]};targets.push(disk);
   for(const [dx,dz]of pathLinks(blocks,x,z)){
-    const neighborWet=!!water[waterKey(x+dx,z+dz)],endTop=neighborWet?.215:.06;
-    // Each tile owns half the connection; both halves meet at the same height.
-    const midTop=(top+endTop)/2,run=Math.hypot(dx,dz)/2,length=Math.hypot(run,midTop-top);
-    const link=new THREE.Mesh(new THREE.BoxGeometry(.72,.055,length+.015),wet?material('#b49a71'):crushedStone());
-    link.position.set(x+dx*.25,(top+midTop)/2-.0275,z+dz*.25);
-    const forward=new THREE.Vector3(dx/2,midTop-top,dz/2).normalize();
-    link.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),forward);link.receiveShadow=true;parent.add(link);
+    if(!dx||!dz)continue; // Cardinal tiles meet directly; no overlapping slabs.
+    const link=new THREE.Mesh(new THREE.BoxGeometry(.72,.06,Math.SQRT2/2+.004),surface);
+    link.position.set(x+dx*.25,.07,z+dz*.25);link.rotation.y=Math.atan2(dx,dz);link.receiveShadow=true;parent.add(link);
     link.userData={position:[x,0,z],normal:[0,1,0]};targets.push(link);
   }
+  if(!wet)pathRelief(parent,x,z,cobble);
   if(wet){
     // Rounded wooden landings grow into continuous boardwalks and dock heads.
     for(let i=-2;i<=2;i++){
@@ -402,16 +416,14 @@ function pathTile(parent,x,z){
     }
     for(const [dx,,dz]of directions){
       if(dockOpen(blocks,x,z,dx,dz))continue;
-      railing(parent,x,.1,z,dx,dz,'#8a7454');
+      railing(parent,x,-.015,z,dx,dz,'#8a7454');
     }
     for(const dx of [-.3,.3])for(const dz of [-.3,.3]){
       if(pathLinks(blocks,x,z).some(([a,b])=>a===Math.sign(dx)&&b===Math.sign(dz)))continue;
       box(parent,.065,.34,.065,x+dx,.17,z+dz,'#887254');
       box(parent,.085,.035,.085,x+dx,.35,z+dz,'#d0b68b');
     }
-  }else{
-    // Bring paving right up to adjoining doorways without covering their tile.
-    for(const [dx,,dz]of directions)if(blocks[key(x+dx,0,z+dz)]?.type==='house')box(parent,dx?.22:.6,.06,dz?.22:.6,x+dx*.42,.03,z+dz*.42,color).material=crushedStone();
+
   }
 }
 
@@ -576,10 +588,11 @@ function edit(hit,remove=false,paint=false){
   }
   if(tool==='role'){const next=assignRole(blocks,key(...hit.position),$('#building-role').value);if(next){commit(next);notify('Building purpose updated. Connect paths to welcome visitors.');}else notify('Choose an existing building.');return;}
   if(tool==='camp'&&!hit.ground&&blocks[key(...hit.position)]?.type==='camp'){const next=upgradeCamp(blocks,key(...hit.position));if(next){commit(next);notify(next[key(...hit.position)].stage===2?'A proper tent, ready for adventure.':'Your glamping retreat is ready.');}else notify('This campsite is fully upgraded.');return;}
+  if(tool==='path'&&!hit.ground&&blocks[key(...hit.position)]?.type==='path'){const next=structuredClone(blocks);next[key(...hit.position)].surface=$('#path-surface').value;commit(next);return;}
   if(paint&&!hit.ground){const k=key(...hit.position);if(['house','balcony'].includes(blocks[k]?.type)){const next=structuredClone(blocks);next[k]={...next[k],wood:$('#wood').value,roof:$('#roof').value};commit(next);}return;}
   const p=destination(hit);
   if(!p||!canPlace(blocks,...p,tool,water)){notify(tool==='tree'?'Trees need open, dry ground.':'Choose open ground, a roof, or an exposed wall. Build up to 8 floors.');return;}
-  const next=structuredClone(blocks);next[key(...p)]={type:tool,wood:$('#wood').value,roof:$('#roof').value};if(tool==='tree')next[key(...p)].species=$('#tree-species').value;if(tool==='camp')next[key(...p)].stage=1;if(tool==='house'&&!hit.ground&&blocks[key(...hit.position)]?.role)next[key(...p)].role=blocks[key(...hit.position)].role;commit(next);
+  const next=structuredClone(blocks);next[key(...p)]={type:tool,wood:$('#wood').value,roof:$('#roof').value};if(tool==='path')next[key(...p)].surface=$('#path-surface').value;if(tool==='tree')next[key(...p)].species=$('#tree-species').value;if(tool==='camp')next[key(...p)].stage=1;if(tool==='house'&&!hit.ground&&blocks[key(...hit.position)]?.role)next[key(...p)].role=blocks[key(...hit.position)].role;commit(next);
 }
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
 function pick(e){const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...targets,ground],false);for(const hit of hits){if(hit.object===ground){const x=Math.round(hit.point.x),z=Math.round(hit.point.z);return Math.abs(x)<=LIMIT&&Math.abs(z)<=LIMIT?{position:[x,0,z],normal:[0,1,0],ground:true}:null;}return {position:hit.object.userData.position,normal:hit.object.userData.normal||hit.face.normal.toArray().map(Math.round),ground:false};}return null;}
@@ -651,7 +664,7 @@ canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('pointerleave',()=>ghost.visible=false);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=['water','role','camp','tree'].includes(value);$('#role-options').hidden=value!=='role';$('#tree-options').hidden=value!=='tree';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
+function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=['water','role','camp','tree','path'].includes(value);$('#role-options').hidden=value!=='role';$('#tree-options').hidden=value!=='tree';$('#path-options').hidden=value!=='path';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>selectTool(b.dataset.tool));
 $('#undo').onclick=undo;
 const dock=$('.dock'), dockMenu=$('#build-menu'), dockToggle=$('#dock-toggle');

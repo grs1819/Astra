@@ -44,9 +44,29 @@ const clearing=new THREE.Group();scene.add(clearing);
 for(let x=-LIMIT;x<=LIMIT;x++)for(let z=-LIMIT;z<=LIMIT;z++)box(clearing,.99,.05,.99,x,-.025,z,((x+z)%2===0)?'#b9cb9e':'#b5c89b');
 clearing.children.forEach(tile=>tile.castShadow=false);
 const rand=(x,z)=>(Math.sin(x*127.1+z*311.7)*43758.5453)%1/2+.5;
-function tree(parent,x,z,scale=1){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(scale);parent.add(g);box(g,.14,.8,.14,0,.4,0,'#776748');for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.ConeGeometry(.64-i*.12,1.25,7),material(['#59754e','#668357','#789361'][i]));m.position.y=1+i*.43;m.castShadow=true;g.add(m);}return g;}
+const treeHeights={pine:2.5,larch:2.7,birch:2.35,redwood:3.8};
+function tree(parent,x,z,scale=1,species='pine'){
+  const g=new THREE.Group();g.name=`tree-${species}`;g.position.set(x,0,z);g.scale.setScalar(scale);parent.add(g);
+  const redwood=species==='redwood',birch=species==='birch',larch=species==='larch';
+  const trunk=redwood?.3:birch?.095:.14,height=redwood?2.7:birch?1.8:1.3;
+  box(g,trunk,height,trunk,0,height/2,0,birch?'#e6e1cb':redwood?'#94573f':'#776748');
+  if(birch){
+    for(let i=0;i<7;i++)box(g,.1,.025,.105,0,.18+i*.21,0,'#6f7162');
+    for(const [xx,yy,zz,r]of [[-.25,1.55,0,.45],[.26,1.8,.08,.46],[0,2.02,-.12,.36]]){
+      const leaves=new THREE.Mesh(new THREE.IcosahedronGeometry(r,1),material('#9eaf68'));leaves.position.set(xx,yy,zz);leaves.scale.y=.85;leaves.castShadow=true;g.add(leaves);
+    }
+  }else{
+    const layers=redwood?4:larch?5:3;
+    for(let i=0;i<layers;i++){
+      const radius=redwood?.64-i*.1:larch?.57-i*.09:.64-i*.12;
+      const m=new THREE.Mesh(new THREE.ConeGeometry(radius,redwood?1.3:larch?.75:1.25,larch?9:7),material(larch?['#a7ac59','#b3b866','#bec276'][i%3]:redwood?['#49694d','#557652','#65825c'][i%3]:['#59754e','#668357','#789361'][i%3]));
+      m.position.y=redwood?1.5+i*.55:larch?.8+i*.38:1+i*.43;m.castShadow=true;g.add(m);
+    }
+  }
+  return g;
+}
 const forest=new THREE.Group();scene.add(forest);
-for(let x=-15;x<=15;x++)for(let z=-15;z<=15;z++)if(Math.max(Math.abs(x),Math.abs(z))>10&&rand(x,z)>.57)tree(forest,x,z,.8+rand(z,x)*.55);
+for(let x=-15;x<=15;x++)for(let z=-15;z<=15;z++)if(Math.max(Math.abs(x),Math.abs(z))>10&&rand(x,z)>.57)tree(forest,x,z,.8+rand(z,x)*.4,['pine','larch','birch','redwood'][Math.min(3,Math.floor(rand(x+33,z-19)*4))]);
 let state={blocks:{},water:{},peak:0};
 try{const current=localStorage.getItem('stillwater-beta-v2');state=current?normalize(JSON.parse(current)):normalize(JSON.parse(localStorage.getItem('stillwater-beta-v1')),true);}catch{}
 let water=state.water;
@@ -350,7 +370,7 @@ function rebuild(){
   const entrances=entrancePlan(blocks,water);
   for(const [k,b]of Object.entries(blocks)){
     const [x,y,z]=k.split(',').map(Number);
-    if(b.type==='tree'){tree(buildings,x,z);}
+    if(b.type==='tree'){tree(buildings,x,z,1,b.species||'pine');}
     if(b.type==='camp'){
       const group=camps.get(k);
       if(group.size===1)camp(buildings,x,z,b.stage||1);
@@ -455,8 +475,8 @@ function rebuild(){
       for(let i=-2;i<=2;i++)box(buildings,.018,.015,.96,x+i*.19,y+.125,z,'#92784f');
       for(const [dx,,dz]of directions)if(!['house','balcony'].includes(blocks[key(x+dx,y,z+dz)]?.type))railing(buildings,x,y,z,dx,dz,'#866e4d');
     }
-    const proxy=new THREE.Mesh(new THREE.BoxGeometry(1,['house','camp'].includes(b.type)?1:b.type==='tree'?1.7:b.type==='path'&&water[waterKey(x,z)]?.45:.15,1),invisible);
-    proxy.position.set(x,y+(['house','camp'].includes(b.type)?.5:b.type==='tree'?.85:b.type==='path'&&water[waterKey(x,z)]?.225:.075),z);proxy.userData={position:[x,y,z]};buildings.add(proxy);targets.push(proxy);
+    const proxy=new THREE.Mesh(new THREE.BoxGeometry(1,['house','camp'].includes(b.type)?1:b.type==='tree'?(treeHeights[b.species]||2.5):b.type==='path'&&water[waterKey(x,z)]?.45:.15,1),invisible);
+    proxy.position.set(x,y+(['house','camp'].includes(b.type)?.5:b.type==='tree'?(treeHeights[b.species]||2.5)/2:b.type==='path'&&water[waterKey(x,z)]?.225:.075),z);proxy.userData={position:[x,y,z]};buildings.add(proxy);targets.push(proxy);
   }
   villagers.rebuild(blocks,water,peak>=3);
 }
@@ -497,7 +517,7 @@ function edit(hit,remove=false,paint=false){
   if(paint&&!hit.ground){const k=key(...hit.position);if(['house','balcony'].includes(blocks[k]?.type)){const next=structuredClone(blocks);next[k]={...next[k],wood:$('#wood').value,roof:$('#roof').value};commit(next);}return;}
   const p=destination(hit);
   if(!p||!canPlace(blocks,...p,tool,water)){notify(tool==='tree'?'Trees need open, dry ground.':'Choose open ground, a roof, or an exposed wall. Build up to 8 floors.');return;}
-  const next=structuredClone(blocks);next[key(...p)]={type:tool,wood:$('#wood').value,roof:$('#roof').value};if(tool==='camp')next[key(...p)].stage=1;if(tool==='house'&&!hit.ground&&blocks[key(...hit.position)]?.role)next[key(...p)].role=blocks[key(...hit.position)].role;commit(next);
+  const next=structuredClone(blocks);next[key(...p)]={type:tool,wood:$('#wood').value,roof:$('#roof').value};if(tool==='tree')next[key(...p)].species=$('#tree-species').value;if(tool==='camp')next[key(...p)].stage=1;if(tool==='house'&&!hit.ground&&blocks[key(...hit.position)]?.role)next[key(...p)].role=blocks[key(...hit.position)].role;commit(next);
 }
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
 function pick(e){const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...targets,ground],false);for(const hit of hits){if(hit.object===ground){const x=Math.round(hit.point.x),z=Math.round(hit.point.z);return Math.abs(x)<=LIMIT&&Math.abs(z)<=LIMIT?{position:[x,0,z],normal:[0,1,0],ground:true}:null;}return {position:hit.object.userData.position,normal:hit.object.userData.normal||hit.face.normal.toArray().map(Math.round),ground:false};}return null;}
@@ -569,7 +589,7 @@ canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('pointerleave',()=>ghost.visible=false);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=['water','role','camp'].includes(value);$('#role-options').hidden=value!=='role';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
+function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=['water','role','camp','tree'].includes(value);$('#role-options').hidden=value!=='role';$('#tree-options').hidden=value!=='tree';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>selectTool(b.dataset.tool));
 $('#undo').onclick=undo;
 const dock=$('.dock'), dockMenu=$('#build-menu'), dockToggle=$('#dock-toggle');

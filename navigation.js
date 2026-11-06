@@ -6,6 +6,8 @@ export function pathLinks(blocks,x,z){
   for(const [dx,dz]of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
     if(blocks[key(x+dx,0,z+dz)]?.type!=='path')continue;
     if(dx&&dz&&[[x+dx,z],[x,z+dz]].some(([a,b])=>blocks[key(a,0,b)]&&blocks[key(a,0,b)].type!=='path'))continue;
+    // An existing right-angle route needs no diagonal infill triangle.
+    if(dx&&dz&&(blocks[key(x+dx,0,z)]?.type==='path'||blocks[key(x,0,z+dz)]?.type==='path'))continue;
     result.push([dx,dz]);
   }
   return result;
@@ -22,7 +24,7 @@ export function buildNavigation(blocks,water,cycling=false){
   for(let x=-LIMIT;x<=LIMIT;x++)for(let z=-LIMIT;z<=LIMIT;z++){
     const block=blocks[key(x,0,z)],wet=!!water[waterKey(x,z)],path=block?.type==='path';
     if((block&&!path)||(wet&&!path)||(cycling&&!path))continue;
-    nodes.set(waterKey(x,z),{x,z,y:path?(wet?.215:.06):0,path,neighbors:[]});
+    nodes.set(waterKey(x,z),{x,z,y:path?.1:0,path,neighbors:[]});
   }
   function bridgeAllows(a,b){
     if(!water[waterKey(a.x,a.z)])return true;
@@ -57,4 +59,18 @@ export function findRoute(nodes,start,end){
   }
   if(!costs.has(end))return [];
   const result=[end];while(result[0]!==start)result.unshift(previous.get(result[0]));return result;
+}
+
+export function pathOutline(blocks,x,z){
+  const joined=(dx,dz)=>['path','house'].includes(blocks[key(x+dx,0,z+dz)]?.type);
+  const points=[];
+  for(let corner=0;corner<4;corner++){
+    const sx=corner===0||corner===3?1:-1,sz=corner<2?1:-1;
+    const radius=joined(sx,0)||joined(0,sz)?0:.12;
+    for(let i=0;i<=5;i++){
+      const a=corner*Math.PI/2+i/5*Math.PI/2;
+      points.push([sx*(.5-radius)+Math.cos(a)*radius,sz*(.5-radius)+Math.sin(a)*radius]);
+    }
+  }
+  return points;
 }

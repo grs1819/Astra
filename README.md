@@ -206,3 +206,13 @@ channels and in water-body decoration counts. Cyclists choose longer trips acros
 their connected path network instead of nearby turnaround points, and residents
 interpolate height along shore ramps. A browser simulation verifies a cyclist
 crosses a five-tile bridge between both dry banks.
+
+### Path surfaces and clean joins
+The Path tool now offers Crushed stone and Tan cobblestone. Tap an existing path
+to resurface it; the selection persists in saves and supports Undo. Gravel uses
+bump shading and small raised stones; cobblestone uses raised, varied tan blocks.
+Adjacent path tiles share full edges; only exposed outside corners round off.
+Existing right-angle connections suppress redundant diagonal infill, while isolated
+diagonal chains remain connected. Paving and timber decks share a 0.1-unit surface
+height, removing overlapping approach ramps. Water paths retain timber decks and
+remember their selected paving for when water is removed.

@@ -183,3 +183,36 @@ has been replaced by light joints, slimmer corner posts, and roof-edge cornices.
 A small roof-colored canopy marks the main entrance. Lookout glazing stays open
 and panoramic. These details derive from the connected facade and path-facing
 entrance, so they update when the building changes without modifying saved towns.
+
+### Rounded paths and waterfront connections
+Path tiles form rounded junctions with cardinal and diagonal links. Diagonals are
+blocked by solid objects on either corner tile, keeping walkers and cyclists out
+of buildings, trees, and camps. Diagonal travel uses its actual distance. Paths on
+water become rounded timber landings with piles, deck seams, and rail openings
+that match routing. Connections slope between dry paths and raised decks. Dry
+paving extends to adjoining building edges. All geometry and routes rebuild after
+placement, removal, water edits, and undo; existing path saves require no migration.
+
+### Softer shorelines
+Lake tiles round exposed corners and gently vary their outer shoreline, replacing
+the straight raised bank strips. Connected edges remain aligned to avoid seams,
+and the depth shading uses the actual water outline. Stream and river connectors
+have subtle curved variation. Shapes are deterministic across reload and undo;
+existing water saves and grid-based docks remain compatible.
+
+Dry paths now use a crushed-stone texture on rounded-square tiles rather than
+circular pads. Water connects diagonally as well as cardinally, both in rendered
+channels and in water-body decoration counts. Cyclists choose longer trips across
+their connected path network instead of nearby turnaround points, and residents
+interpolate height along shore ramps. A browser simulation verifies a cyclist
+crosses a five-tile bridge between both dry banks.
+
+### Path surfaces and clean joins
+The Path tool now offers Crushed stone and Tan cobblestone. Tap an existing path
+to resurface it; the selection persists in saves and supports Undo. Gravel uses
+bump shading and small raised stones; cobblestone uses raised, varied tan blocks.
+Adjacent path tiles share full edges; only exposed outside corners round off.
+Existing right-angle connections suppress redundant diagonal infill, while isolated
+diagonal chains remain connected. Paving and timber decks share a 0.1-unit surface
+height, removing overlapping approach ramps. Water paths retain timber decks and
+remember their selected paving for when water is removed.

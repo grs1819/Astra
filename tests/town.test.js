@@ -123,3 +123,8 @@ test('tree species persist and legacy or invalid species become pine',()=>{
  const result=normalize({blocks}).blocks;
  for(const [i,species]of ['larch','birch','pine','redwood','pine','pine'].entries())assert.equal(result[key(i,0,0)].species,species);
 });
+
+test('path surfaces persist and old paths default to gravel',()=>{
+ const b=normalize({blocks:{'0,0,0':{type:'path',surface:'cobble'},'1,0,0':{type:'path'}}}).blocks;
+ assert.equal(b['0,0,0'].surface,'cobble');assert.equal(b['1,0,0'].surface,'gravel');
+});

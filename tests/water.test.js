@@ -14,10 +14,10 @@ test('decoration progresses at 4, 10, and 18 connected tiles',()=>{
     const result=analyzeWater(water);assert.equal(result.bodies.length,1);assert.equal(result.bodies[0].size,size);assert.equal(result.bodies[0].tier,tier);
   }
 });
-test('mixed water connects cardinally, not diagonally; removal splits bodies',()=>{
+test('mixed water connects cardinally and diagonally; removal splits bodies',()=>{
   const water={'0,0':'stream','1,0':'river','2,0':'lake','3,1':'lake'};
-  assert.equal(analyzeWater(water).bodies.length,2);
-  const split=waterEdit(water,{},1,0,null);assert.equal(analyzeWater(split).bodies.length,3);assert.equal(water['1,0'],'river');
+  assert.equal(analyzeWater(water).bodies.length,1);
+  const split=waterEdit(water,{},1,0,null);assert.equal(analyzeWater(split).bodies.length,2);assert.equal(water['1,0'],'river');
 });
 test('water coexists with cottages and paths; painting cannot destroy trees',()=>{
   const blocks={'0,0,0':house,'1,0,0':{type:'path'},'2,0,0':{type:'tree'}};
@@ -34,4 +34,14 @@ test('water painting rejects invalid tools, bounds, and no-op edits',()=>{
   assert.equal(waterEdit({}, {},10,0,'river'),null);assert.equal(waterEdit({}, {},0,0,'sea'),null);
   assert.equal(waterEdit({'0,0':'stream'}, {},0,0,'stream'),null);assert.equal(waterEdit({}, {},0,0,null),null);
   assert.deepEqual(waterEdit({'0,0':'stream'}, {},0,0,'lake'),{'0,0':'lake'});assert.deepEqual(normalizeWater(null),{});
+});
+
+test('lake outlines round exposed corners, remain deterministic, and preserve joins',async()=>{
+ const {lakeOutline}=await import('../water.js');
+ const solo=lakeOutline({'0,0':'lake'},0,0);
+ assert.ok(solo[8][0]<.45&&solo[8][1]<.45);
+ assert.deepEqual(solo,lakeOutline({'0,0':'lake'},0,0));
+ const joined=lakeOutline({'0,0':'lake','1,0':'lake'},0,0);
+ assert.equal(joined[0][0],.5);
+ assert.ok(joined.every(([x,z])=>Math.abs(x)<=.500001&&Math.abs(z)<=.500001));
 });

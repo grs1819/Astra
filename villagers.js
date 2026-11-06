@@ -46,8 +46,8 @@ export function createVillagers(scene,material){
         cranks.push(mesh(root,'shoe','#665b49',[.07,.035,.09],[0,0,0]));
       }
     }
-    const rod=new THREE.Mesh(geometries.limb,material('#795b39'));rod.scale.set(.009,.65,.009);rod.position.set(.08,.38,.24);rod.rotation.x=.85;rod.visible=false;figure.add(rod);
-    return {root,figure,arms,legs,wheels,cranks,pedalLegs,bike,rod};
+    const fishingRod=new THREE.Mesh(geometries.limb,material('#795b39'));fishingRod.scale.set(.009,.65,.009);fishingRod.position.set(.08,.38,.24);fishingRod.rotation.x=.85;fishingRod.visible=false;figure.add(fishingRod);
+    return {root,figure,arms,legs,wheels,cranks,pedalLegs,bike,rod:fishingRod};
   }
   function rebuild(blocks,water,unlocked){
     // Geometry and materials are shared; rebuilding removes instances only.
@@ -94,19 +94,18 @@ export function createVillagers(scene,material){
       if(a.pause>0){a.pause-=dt;if(!a.bike){const shore=fishingSpots.get(a.id);a.rod.visible=!!shore;a.legs.forEach(l=>l.rotation.x=0);a.arms.forEach(l=>l.rotation.x=shore?-1:0);a.figure.position.y=0;if(shore)a.root.rotation.y=Math.atan2(shore[0],shore[1]);}continue;}
       a.rod.visible=false;
       if(!a.route.length){
-        const choices=reachable(a.graph,a.id,6).filter(id=>id!==a.id);
+        const choices=reachable(a.graph,a.id,a.bike?40:6).filter(id=>id!==a.id);
         if(!choices.length)continue;
         const visits=attractions.filter(id=>id!==a.id&&a.graph.has(id)&&findRoute(a.graph,a.id,id).length);
-        const options=visits.length&&a.choices%2===0?visits:choices;
+        const options=a.bike?choices.slice(-Math.max(1,Math.ceil(choices.length/3))):visits.length&&a.choices%2===0?visits:choices;
         const destination=options[(a.index*7+a.choices++*11)%options.length];a.route=findRoute(a.graph,a.id,destination).slice(1);
       }
       if(!a.route.length)continue;
       const start=a.graph.get(a.id),end=a.graph.get(a.route[0]);
-      const speed=a.bike?.7:.32+(a.index%3)*.035;a.progress=Math.min(1,a.progress+dt*speed);
+      const speed=a.bike?.7:.32+(a.index%3)*.035;a.progress=Math.min(1,a.progress+dt*speed/Math.hypot(end.x-start.x,end.z-start.z));
       const x=THREE.MathUtils.lerp(start.x,end.x,a.progress),z=THREE.MathUtils.lerp(start.z,end.z,a.progress);
       // Feet and wheels follow the actual tile height, including raised bridge decks.
-      const tile=walkGraph.get(waterKey(Math.round(x),Math.round(z)));
-      a.root.position.set(x,tile?.y??start.y,z);
+      a.root.position.set(x,THREE.MathUtils.lerp(start.y,end.y,a.progress),z);
       const heading=Math.atan2(end.x-start.x,end.z-start.z);
       a.root.rotation.y+=Math.atan2(Math.sin(heading-a.root.rotation.y),Math.cos(heading-a.root.rotation.y))*Math.min(1,dt*10);
       a.phase+=dt*speed*(a.bike?7:16);

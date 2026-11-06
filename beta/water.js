@@ -1,11 +1,11 @@
-// Water occupies terrain independently of buildings. Connectivity is cardinal,
-// so touching corners do not merge bodies or unlock shared decoration tiers.
+// Water occupies terrain independently of buildings and joins across diagonals.
 export const WATER_TYPES = {
   stream: {label:'Stream',width:.36,color:'#79b5ae'},
   river: {label:'River',width:.74,color:'#5d9f9e'},
   lake: {label:'Lake',width:1,color:'#548f96'},
 };
 export const waterKey=(x,z)=>`${x},${z}`;
+export const waterConnections=[[1,1],[1,-1],[-1,1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
 export const waterDirections=[[1,0],[-1,0],[0,1],[0,-1]];
 export function normalizeWater(source,limit=9){
   const result={};
@@ -24,7 +24,7 @@ export function analyzeWater(water){
     const queue=[start];cells.set(start,body);
     for(let i=0;i<queue.length;i++){
       const k=queue[i],[x,z]=k.split(',').map(Number);body.tiles.push(k);
-      for(const [dx,dz]of waterDirections){const n=waterKey(x+dx,z+dz);if(water[n]&&!cells.has(n)){cells.set(n,body);queue.push(n);}}
+      for(const [dx,dz]of waterConnections){const n=waterKey(x+dx,z+dz);if(water[n]&&!cells.has(n)){cells.set(n,body);queue.push(n);}}
     }
     body.size=body.tiles.length;
     body.tier=body.size>=18?3:body.size>=10?2:body.size>=4?1:0;

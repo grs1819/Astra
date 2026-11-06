@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {WATER_TYPES,waterKey,waterDirections,analyzeWater,lakeOutline} from './water.js';
+import {WATER_TYPES,waterKey,waterDirections,waterConnections,analyzeWater,lakeOutline} from './water.js';
 import {LIMIT} from './town.js';
 
 // The shoreline depth field and water geometry rebuild only after edits.
@@ -122,7 +122,7 @@ export function createWaterView(scene,material,box){
     for(const [k,type]of Object.entries(water)){
       const [x,z]=k.split(',').map(Number),config=WATER_TYPES[type],r=config.width/2,body=analysis.cells.get(k);
       const mat=surfaces.get(type),bank=material('#b6b69a');
-      const neighbors=waterDirections.filter(([dx,dz])=>water[waterKey(x+dx,z+dz)]);
+      const neighbors=waterConnections.filter(([dx,dz])=>water[waterKey(x+dx,z+dz)]);
       if(type==='lake'){
         const outline=lakeOutline(water,x,z);
         flat(outline.map(([a,b])=>[x+(a-x)*1.045,z+(b-z)*1.045]),.012,bank);
@@ -137,14 +137,15 @@ export function createWaterView(scene,material,box){
       }
       // Connect unlike widths using a shared width at the tile boundary.
       for(const [dx,dz]of neighbors){
-        if(type==='lake'&&water[waterKey(x+dx,z+dz)]==='lake')continue;
+        if((dx===0||dz===0)&&type==='lake'&&water[waterKey(x+dx,z+dz)]==='lake')continue;
+        const distance=Math.hypot(dx,dz),nx=dx/distance,nz=dz/distance;
         const edge=(config.width+WATER_TYPES[water[waterKey(x+dx,z+dz)]].width)/4;
         const polygon=(extra)=>{
           const points=[];
           for(const side of [-1,1])for(let j=0;j<=8;j++){
             const t=side===-1?j/8:1-j/8;
             const width=r+(edge-r)*t+extra+Math.sin(t*Math.PI)*.018*Math.sin(x*2.1+z*3.7);
-            points.push([x+dx*.5*t+side*dz*width,z+dz*.5*t-side*dx*width]);
+            points.push([x+dx*.5*t+side*nz*width,z+dz*.5*t-side*nx*width]);
           }
           return points;
         };

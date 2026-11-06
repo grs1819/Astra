@@ -152,14 +152,8 @@ function roof(parent,x,y,z,color){
   const estate=tier==='estate';
   const rise=estate?1.35:1;
   if(form.kind==='terrace'){
-    const deck=box(parent,1,.08,1,x,top+.04,z,'#bba47d');
+    const deck=timberDeck(parent,x,top,z,blocks[key(x,y,z)].wood,true);
     deck.userData={position:[x,y,z],normal:[0,1,0]};targets.push(deck);
-    for(let i=-2;i<=2;i++)box(parent,.016,.012,.98,x+i*.19,top+.085,z,'#967c56');
-    for(const [dx,,dz]of directions){
-      const neighbor=roofForms.get(key(x+dx,y,z+dz));
-      if(blocks[key(x+dx,y+1,z+dz)]||neighbor?.kind==='terrace')continue;
-      railing(parent,x,top-.03,z,dx,dz,'#897553');
-    }
     return;
   }
   const vertices=[];
@@ -233,6 +227,37 @@ function railing(parent,x,y,z,dx,dz,color){
   const g=new THREE.Group();g.position.set(x+dx*.46,y+.12,z+dz*.46);g.rotation.y=dx?Math.PI/2:0;parent.add(g);
   box(g,.97,.055,.055,0,.39,0,color);
   for(let i=-2;i<=2;i++)box(g,.045,.39,.045,i*.21,.2,0,color);
+}
+function timberDeck(parent,x,y,z,wood,terrace=false){
+  const color=timber[wood]||timber.oak,base=terrace?.08:.12;
+  const deck=box(parent,1,base,1,x,y+base/2,z,color);
+  for(let i=-2;i<=2;i++)box(parent,.19,.025,1,x+i*.2,y+base+.0125,z,color);
+  const joined=(dx,dz)=>['house','balcony'].includes(blocks[key(x+dx,y,z+dz)]?.type)||(terrace&&roofForms.get(key(x+dx,y-1,z+dz))?.kind==='terrace');
+  for(const [dx,,dz]of directions){
+    if(joined(dx,dz))continue;
+    box(parent,dx?.07:1,.12,dz?.07:1,x+dx*.47,y+.025,z+dz*.47,color);
+    const opening=y===0&&(dz===1||blocks[key(x+dx,0,z+dz)]?.type==='path');
+    if(!opening){
+      const edge=new THREE.Group();edge.position.set(x+dx*.46,y+base,z+dz*.46);edge.rotation.y=dx?Math.PI/2:0;parent.add(edge);
+      for(const side of [-1,1]){box(edge,.065,.43,.065,side*.45,.215,0,color);box(edge,.085,.025,.085,side*.45,.44,0,color);}
+      box(edge,.98,.055,.075,0,.4,0,color);
+      for(let i=-2;i<=2;i++)box(edge,.018,.32,.018,i*.14,.2,0,'#4f5850');
+    }
+    if(y===0&&dz===1&&!blocks[key(x,0,z+1)]&&!water[waterKey(x,z+1)]&&z<LIMIT)box(parent,.66,.065,.17,x,.0325,z+.55,color);
+  }
+  if(!terrace&&y>0&&!blocks[key(x,y-1,z)]){
+    for(const [dx,,dz]of directions)if(blocks[key(x+dx,y,z+dz)]?.type==='house'){
+      for(const offset of [-.32,.32]){
+        const start=[x+dx*.48+dz*offset,y-.45,z+dz*.48+dx*offset],end=[x-dx*.25+dz*offset,y+.015,z-dz*.25+dx*offset];
+        timberBeam(parent,start,end,.065,color);
+      }
+    }
+  }
+  if(!terrace&&blocks[key(x,y+1,z)]?.type==='house')for(const [dx,dz]of [[-.43,.43],[.43,.43]]){
+    box(parent,.065,1-base,.065,x+dx,y+base+(1-base)/2,z+dz,color);
+    timberBeam(parent,[x+dx,y+.7,z+dz],[x+dx*.35,y+.98,z+dz],.045,color);
+  }
+  return deck;
 }
 function arch(parent,x,y,z,axis,color){
   const shape=new THREE.Shape();shape.moveTo(-.5,1);shape.lineTo(.5,1);shape.lineTo(.5,.05);
@@ -570,9 +595,7 @@ function rebuild(){
       const axis=archAxis(blocks,x,y,z);if(axis)arch(buildings,x,y,z,axis,'#b5ad89');
     }
     if(b.type==='balcony'){
-      box(buildings,1,.12,1,x,y+.06,z,timber[b.wood]);
-      for(let i=-2;i<=2;i++)box(buildings,.018,.015,.96,x+i*.19,y+.125,z,'#92784f');
-      for(const [dx,,dz]of directions)if(!['house','balcony'].includes(blocks[key(x+dx,y,z+dz)]?.type))railing(buildings,x,y,z,dx,dz,'#866e4d');
+      timberDeck(buildings,x,y,z,b.wood);
     }
     const proxy=new THREE.Mesh(new THREE.BoxGeometry(1,['house','camp'].includes(b.type)?1:b.type==='tree'?(treeHeights[b.species]||2.5):b.type==='path'&&water[waterKey(x,z)]?.45:.15,1),invisible);
     proxy.position.set(x,y+(['house','camp'].includes(b.type)?.5:b.type==='tree'?(treeHeights[b.species]||2.5)/2:b.type==='path'&&water[waterKey(x,z)]?.225:.075),z);proxy.userData={position:[x,y,z]};buildings.add(proxy);targets.push(proxy);

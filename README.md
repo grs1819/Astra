@@ -224,3 +224,13 @@ rafters, ties, upright members, and braces. Rectangular and tower roofs gain dee
 eaves with timber undersides and supports. Concave roof overhangs remain restrained
 to preserve clean joins; expanded Nordic roof and porch variants are future work.
 Small-window proportions and panoramic lookout interiors remain intact.
+
+### Decks, porches, and balconies
+The former Balcony tool is now labeled Deck (5). Its saved block type remains
+unchanged, preserving existing towns. Ground decks serve as porches or terraces;
+elevated decks become balconies. All use individual timber planks, edge beams,
+capped posts, and slim dark balusters in the selected timber palette. Joined
+sections omit internal railings. Wall-attached elevated decks gain diagonal
+brackets, while decks beneath house rooms gain timber posts and braces. Ground
+frontages and path connections stay open, with a step on clear dry frontage.
+Roof terraces share the same detailing.

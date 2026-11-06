@@ -174,3 +174,12 @@ immediately, require dry ground, and persist through autosave and undo. Old tree
 load as pines. The surrounding forest deterministically mixes all four species.
 The header now uses a smaller logo and a compact population chip on desktop and
 mobile, leaving more space for the town.
+
+### Estate facade refinement
+Estate windows are smaller with slim frames and modest sills. Entrance-facing
+walls receive fuller windows and paired openings above the entrance; longer side
+walls alternate smaller windows with quiet solid bays. Heavy floor-by-floor trim
+has been replaced by light joints, slimmer corner posts, and roof-edge cornices.
+A small roof-colored canopy marks the main entrance. Lookout glazing stays open
+and panoramic. These details derive from the connected facade and path-facing
+entrance, so they update when the building changes without modifying saved towns.

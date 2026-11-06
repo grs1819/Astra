@@ -3,7 +3,7 @@ import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
 import {createWaterView} from './water-view.js';
 import {createVillagers} from './villagers.js';
-import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp, campsitePlan, lookoutPlan} from './town.js';
+import {LIMIT, key, directions, normalize, cottageCount, canPlace, removeBlock, archAxis, roofPlan, architecturePlan, assignRole, upgradeCamp, campsitePlan, lookoutPlan, entrancePlan, joinedRoofHeight} from './town.js';
 
 const $=s=>document.querySelector(s);
 const canvas=$('#world');
@@ -142,6 +142,14 @@ function roof(parent,x,y,z,color){
   if(form.kind==='hip'){
     const corners=[[x-.53,top,z-.53],[x+.53,top,z-.53],[x+.53,top,z+.53],[x-.53,top,z+.53]];
     for(let i=0;i<4;i++)triangle(corners[i],corners[(i+1)%4],[x,top+.48*rise,z]);
+  }else if(form.kind==='joined'){
+    const step=.25;
+    const point=(a,b)=>[a,top+joinedRoofHeight(form,a,b)*rise,b];
+    for(let i=0;i<4;i++)for(let j=0;j<4;j++){
+      const a=x-.5+i*step,b=z-.5+j*step;
+      triangle(point(a,b),point(a+step,b),point(a+step,b+step));
+      triangle(point(a,b),point(a+step,b+step),point(a,b+step));
+    }
   }else{
     const cross=form.axis==='x'?z:x,along=form.axis==='x'?x:z;
     const cuts=[cross-.5,...(form.ridge>cross-.5&&form.ridge<cross+.5?[form.ridge]:[]),cross+.5];
@@ -338,13 +346,7 @@ function rebuild(){
   architecture=architecturePlan(blocks);
   lookouts=lookoutPlan(blocks);
   const camps=campsitePlan(blocks);
-  const roleFronts=new Map();
-  // One entrance treatment per connected building, preferring the front (+Z).
-  for(const [dx,dz]of [[0,1],[1,0],[-1,0],[0,-1]])for(const k of Object.keys(blocks).sort()){
-    const b=blocks[k],[x,y,z]=k.split(',').map(Number),form=architecture.get(k);
-    if(y!==0||b.type!=='house'||!b.role||b.role==='home'||roleFronts.has(form)||blocks[key(x+dx,0,z+dz)]?.type==='house')continue;
-    roleFronts.set(form,{k,dx,dz});
-  }
+  const entrances=entrancePlan(blocks,water);
   for(const [k,b]of Object.entries(blocks)){
     const [x,y,z]=k.split(',').map(Number);
     if(b.type==='tree'){tree(buildings,x,z);}
@@ -392,22 +394,24 @@ function rebuild(){
       }
       for(const [dx,,dz]of directions){
         if(lookout||blocks[key(x+dx,y,z+dz)]?.type==='house')continue;
+        const contiguous=side=>blocks[key(x+dz*side,y,z-dx*side)]?.type==='house'&&blocks[key(x+dx+dz*side,y,z+dz-dx*side)]?.type!=='house';
         const face=new THREE.Group();face.position.set(x+dx*.505,y+base,z+dz*.505);face.scale.y=1-base;face.rotation.y=dx?dx*Math.PI/2:dz===-1?Math.PI:0;buildings.add(face);
         if(lodge){
           for(let h=.1;h<1;h+=.16){
-            const log=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,1.04,7),material(timber[b.wood]));
+            const log=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,1,7),material(timber[b.wood]));
             log.rotation.z=Math.PI/2;log.position.set(0,h,.008);log.castShadow=true;face.add(log);
           }
         }else if(estate){
-          box(face,1.04,.09,.09,0,.94,.025,'#eaddc2');
-          box(face,1.04,.08,.08,0,.07,.025,'#a79a7e');
+          box(face,1,.09,.09,0,.94,.025,'#eaddc2');
+          box(face,1,.08,.08,0,.07,.025,'#a79a7e');
           for(const side of [-1,1]){
+            if(contiguous(side))continue;
             box(face,.075,.84,.08,side*.45,.5,.025,timber[b.wood]);
             if(y===0)for(let h=.18;h<.9;h+=.2)box(face,.13,.09,.1,side*.43,h,.035,'#d6cbb1');
           }
         }else for(let h=.17;h<1;h+=.19)box(face,1,.017,.016,0,h,0,'#987951');
         const terraceDoor=y>0&&(blocks[key(x+dx,y,z+dz)]?.type==='balcony'||roofForms.get(key(x+dx,y-1,z+dz))?.kind==='terrace');
-        if((y===0&&dz===1)||terraceDoor){
+        if((y===0&&entrances.get(k)?.dx===dx&&entrances.get(k)?.dz===dz)||terraceDoor){
           box(face,estate?.34:.24,.61,.045,0,.305,.09,'#6c5942');
           box(face,.035,.035,.04,.08,.29,.12,'#e1c98c');
           if(estate){
@@ -416,9 +420,9 @@ function rebuild(){
             box(face,.22,.12,.04,0,.54,.12,'#f2d292');
           }
         }else{
-          const positions=estate?[-.22,.22]:[0];
+          const positions=[0];
           for(const wx of positions){
-            const w=estate?.25:.3,h=estate?.46:.36,depth=lodge?.105:.035;
+            const w=estate?.43:.3,h=estate?.46:.36,depth=lodge?.105:.035;
             box(face,w+.07,h+.07,.055,wx,.56,depth,'#735e45');
             box(face,w,h,.03,wx,.56,depth+.04,'#f2d292');
             box(face,.025,h,.035,wx,.56,depth+.06,'#957b50');
@@ -429,14 +433,17 @@ function rebuild(){
         // Brackets under cantilevered rooms, leaving walkable space below.
         if(y>0&&!blocks[key(x,y-1,z)]){const brace=box(face,.07,.48,.07,dx?-.29:.29,-.13,-.12,'#8a7050');brace.rotation.x=-.65;}
       }
-      const front=roleFronts.get(architecture.get(k));
-      if(front?.k===k)roleDetails(buildings,x,z,b.role,base,front.dx,front.dz);
-      // Short entrance stairs occupy only free frontage and rebuild with terrain.
-      if(y===0&&!blocks[key(x,0,z+1)]&&!water[waterKey(x,z+1)]&&z<LIMIT){
-        const steps=wetBase?3:1;
-        for(let i=0;i<steps;i++){
-          const h=(steps-i)*(wetBase?.085:.065);
-          box(buildings,.4,h,.12,x,h/2,z+.56+i*.11,'#afa68a');
+      const front=entrances.get(k);
+      if(front&&b.role&&b.role!=='home')roleDetails(buildings,x,z,b.role,base,front.dx,front.dz);
+      // Shared entrances follow adjacent paths, with stairs only on clear ground.
+      if(y===0&&front){
+        const nx=x+front.dx,nz=z+front.dz;
+        if(!blocks[key(nx,0,nz)]&&!water[waterKey(nx,nz)]&&Math.abs(nx)<=LIMIT&&Math.abs(nz)<=LIMIT){
+          const steps=wetBase?3:1;
+          for(let i=0;i<steps;i++){
+            const h=(steps-i)*(wetBase?.085:.065),distance=.56+i*.11;
+            box(buildings,front.dx?.12:.4,h,front.dz?.12:.4,x+front.dx*distance,h/2,z+front.dz*distance,'#afa68a');
+          }
         }
       }
       if(!blocks[key(x,y+1,z)])roof(buildings,x,y,z,roofs[b.roof]);

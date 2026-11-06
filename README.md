@@ -144,3 +144,33 @@ remain reversible, while manual upgrades persist. Role buildings now display
 larger color-coded fascias, awnings, and projecting signs on exposed sides.
 
 Connected camp shelters now merge into a continuous roof and deck across their actual footprint, with perimeter-only supports. The gathering area moves to a nearby empty dry tile outside the fabric; it hides if no space is available and relocates when that tile is built on. Role signage appears only on one exposed entrance side per connected building, preferring the front.
+
+### Tower lookouts
+A one- or two-room summit above at least three directly stacked house rooms gains
+panoramic glazing, a timber floor, a brass telescope and tripod, a map table,
+and a woodburning stove with a roof flue. Broad summits and unsupported upper
+extensions retain normal architecture. Growing, reshaping, removing, undoing,
+and loading a town recompute the lookout automatically without new save fields.
+
+### Connected building shapes
+Connected buildings now share a main entrance, preferring adjacent paths and
+otherwise a central front-facing position. Entrance stairs and role signs follow
+that doorway. Long facades omit internal corner posts, align log courses, and
+use wider estate windows. Rectangular roofs retain shared gables; irregular and
+L-shaped roof surfaces follow the occupied footprint, joining at shared edges
+without covering courtyard gaps. Stepped roofs retain terraces and upper doors.
+All forms recalculate after edits, removal, undo, and loading existing saves.
+
+### Mobile camera controls
+Drag one finger to orbit and tilt; drag two fingers to pan over the ground;
+pinch two fingers to zoom. A quick, stationary single-finger tap edits the town.
+Multi-touch gestures, drags, and long presses cannot place blocks. Select Remove
+for touch deletion. Mouse controls remain middle-drag orbit, Shift-middle-drag
+pan, and wheel zoom. Tilt stays above the ground while allowing a wider view.
+
+### Tree species and compact header
+Select Tree (3) to choose Pine, Larch, Birch, or Redwood. All species are available
+immediately, require dry ground, and persist through autosave and undo. Old trees
+load as pines. The surrounding forest deterministically mixes all four species.
+The header now uses a smaller logo and a compact population chip on desktop and
+mobile, leaving more space for the town.

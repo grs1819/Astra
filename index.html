@@ -16,7 +16,7 @@
     <div class="brand">
       <h1 class="brand-title"><img class="brand-logo" src="./assets/stillwater-logo.png" alt="Stillwater — a little place to grow" width="1536" height="1024"></h1>
     </div>
-    <div class="status"><span class="sun">☀</span> An endless afternoon <span class="divider">│</span> <span id="population">0 villagers</span></div>
+    <div class="status"><span class="sun" aria-hidden="true">☀</span> <span id="population">0 villagers</span></div>
   </header>
   <div id="toast" role="status"></div>
 
@@ -58,6 +58,11 @@
               <label for="roof">COLOR</label>
               <select id="roof" aria-label="Roof color"><option value="moss">Forest green</option><option value="clay" disabled>Rust red · 9 cottages</option><option value="slate" disabled>Slate blue · 12 cottages</option></select>
             </div>
+            <div id="tree-options" class="water-options" hidden>
+              <label for="tree-species">TREE TYPE</label>
+              <select id="tree-species"><option value="pine">Pine</option><option value="larch">Larch</option><option value="birch">Birch</option><option value="redwood">Redwood</option></select>
+              <p>Choose a species and tap empty, dry ground to plant.</p>
+            </div>
             <div id="role-options" class="water-options" hidden>
               <label for="building-role">BUILDING PURPOSE</label>
               <select id="building-role"><option value="home">Home</option><option value="fishing">Fishing hut</option><option value="supply">Outdoor supply shop</option><option value="cafe">Bakery &amp; café</option><option value="inn">Inn &amp; lodge</option><option value="workshop">Carpenter’s workshop</option><option value="boathouse">Boathouse</option></select>
@@ -74,8 +79,10 @@
             <details class="help"><summary>How to play</summary><div class="help-content">
               <p><strong>Camping:</strong> select Camp (7) and click dry ground for a lean-to. Click it again for a tent, then a glamping shelter. Adjacent camp tiles merge into one larger shelter. At 2 tiles a campfire appears on nearby empty dry ground; at 4 it gains chairs and a lantern. Role (8) assigns a purpose to existing buildings. Right-click removes; Undo restores.</p>
               <p><strong>Build:</strong> click roofs to grow up, walls to grow out. Alt-click to repaint. Right-click to remove.</p>
+              <p><strong>Touch:</strong> drag one finger to orbit and tilt. Drag two fingers to pan; pinch to zoom. A quick tap builds; select Remove to erase. Camera gestures never place blocks.</p>
               <p><strong>Explore:</strong> middle-drag to orbit and tilt, Shift + middle-drag to pan, scroll to zoom. Q / E rotate; R recenters.</p>
               <p><strong>Roofing:</strong> choose a roof color. Cottages have natural moss over a colored roof; log cabins gain weathered ribbed metal; estates gain polished standing-seam panels. Two stories or three rooms create a log cabin; four stories or ten rooms create an estate.</p>
+              <p><strong>Lookouts:</strong> stack at least three floors with a narrow one- or two-room summit to create panoramic windows, a telescope, map table, and woodburning stove. Add height to move the lookout upward.</p>
               <p><strong>Shape:</strong> connected cottages share sloped roofs. Build a taller neighbor to turn an exposed lower roof into a railed terrace. Raised entrances gain steps automatically.</p>
               <p><strong>Connect:</strong> bridge two upper walls for an archway. Choose Balcony, then click an upper wall.</p>
               <p><strong>Water:</strong> select Water (6), then Stream, River, or Lake. Click ground to add tiles; connected bodies gain detail as they grow. Cottages stand on stilts and paths become footbridges. Water can also be added beneath existing cottages and paths. With Water selected, right-click removes water only. Remove trees before adding water.</p>

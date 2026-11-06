@@ -89,3 +89,37 @@ test('connected camps share one hub, furnish at four, and split on removal',asyn
  delete b['1,0,0'];plan=campsitePlan(b);assert.equal(plan.get('0,0,0').size,1);assert.equal(plan.get('2,0,0').size,2);assert.equal(plan.get('2,0,0').stage,2);
  const upgraded=upgradeCamp(b,'2,0,1');assert.equal(upgraded['2,0,0'].stage,3);assert.equal(upgraded['0,0,0'].stage,1);
 });
+
+test('narrow stacked towers gain lookouts but broad or unsupported tops do not',async()=>{
+ const {lookoutPlan}=await import('../town.js');
+ const b={};for(let y=0;y<3;y++)b[key(0,y,0)]=house;
+ assert.deepEqual([...lookoutPlan(b)],['0,2,0']);
+ b['0,3,0']=house;assert.deepEqual([...lookoutPlan(b)],['0,3,0']);
+ delete b['0,3,0'];for(let x=1;x<=2;x++)for(let y=0;y<3;y++)b[key(x,y,0)]=house;
+ assert.equal(lookoutPlan(b).size,0);
+ for(let y=0;y<3;y++)delete b[key(2,y,0)];assert.equal(lookoutPlan(b).size,2);
+ delete b['1,1,0'];assert.equal(lookoutPlan(b).size,0);
+});
+
+test('concave roofs follow occupied tiles and meet at shared edges',async()=>{
+ const {roofPlan,joinedRoofHeight}=await import('../town.js');
+ const b={};for(const [x,z]of [[0,0],[1,0],[2,0],[0,1],[0,2]])b[key(x,0,z)]=house;
+ const plan=roofPlan(b),form=plan.get('0,0,0');assert.equal(form.kind,'joined');assert.equal(plan.has('1,0,1'),false);
+ assert.equal(plan.get('1,0,0'),form);assert.equal(joinedRoofHeight(form,.5,1),0);assert.ok(joinedRoofHeight(form,0,0)>0);
+ for(let x=0;x<3;x++)for(let z=0;z<3;z++)b[key(x,0,z)]=house;
+ assert.equal(roofPlan(b).get('0,0,0').kind,'gable');
+});
+test('connected houses share one entrance and prefer an adjacent path',async()=>{
+ const {entrancePlan}=await import('../town.js');
+ const b={'0,0,0':house,'1,0,0':house,'2,0,0':house};
+ let plan=entrancePlan(b);assert.equal(plan.size,1);assert.equal(plan.get('1,0,0').dz,1);
+ b['-1,0,0']={type:'path'};plan=entrancePlan(b);assert.equal(plan.size,1);assert.equal(plan.get('0,0,0').dx,-1);
+ delete b['1,0,0'];assert.equal(entrancePlan(b).size,2);
+});
+
+test('tree species persist and legacy or invalid species become pine',()=>{
+ const blocks={};for(const [i,species]of ['larch','birch','pine','redwood','unknown'].entries())blocks[key(i,0,0)]={type:'tree',species};
+ blocks['5,0,0']={type:'tree'};
+ const result=normalize({blocks}).blocks;
+ for(const [i,species]of ['larch','birch','pine','redwood','pine','pine'].entries())assert.equal(result[key(i,0,0)].species,species);
+});

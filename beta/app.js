@@ -368,6 +368,8 @@ function rebuild(){
   lookouts=lookoutPlan(blocks);
   const camps=campsitePlan(blocks);
   const entrances=entrancePlan(blocks,water);
+  const buildingFronts=new Map();
+  for(const [id,entry]of entrances)buildingFronts.set(architecture.get(id),entry);
   for(const [k,b]of Object.entries(blocks)){
     const [x,y,z]=k.split(',').map(Number);
     if(b.type==='tree'){tree(buildings,x,z,1,b.species||'pine');}
@@ -416,6 +418,14 @@ function rebuild(){
       for(const [dx,,dz]of directions){
         if(lookout||blocks[key(x+dx,y,z+dz)]?.type==='house')continue;
         const contiguous=side=>blocks[key(x+dz*side,y,z-dx*side)]?.type==='house'&&blocks[key(x+dx+dz*side,y,z+dz-dx*side)]?.type!=='house';
+        const entrance=buildingFronts.get(architecture.get(k));
+        const isFront=entrance?.dx===dx&&entrance?.dz===dz;
+        const entryPosition=entrance?.k.split(',').map(Number);
+        const entryBay=isFront&&entryPosition&&(dx?entryPosition[2]===z:entryPosition[0]===x);
+        // Count the continuous exposed wall to space side windows across a facade.
+        const exposed=offset=>blocks[key(x+dz*offset,y,z-dx*offset)]?.type==='house'&&blocks[key(x+dx+dz*offset,y,z+dz-dx*offset)]?.type!=='house';
+        let left=0,right=0;while(exposed(-left-1))left++;while(exposed(right+1))right++;
+        const quietBay=estate&&!isFront&&left+right>=2&&left%2===1;
         const face=new THREE.Group();face.position.set(x+dx*.505,y+base,z+dz*.505);face.scale.y=1-base;face.rotation.y=dx?dx*Math.PI/2:dz===-1?Math.PI:0;buildings.add(face);
         if(lodge){
           for(let h=.1;h<1;h+=.16){
@@ -423,12 +433,14 @@ function rebuild(){
             log.rotation.z=Math.PI/2;log.position.set(0,h,.008);log.castShadow=true;face.add(log);
           }
         }else if(estate){
-          box(face,1,.09,.09,0,.94,.025,'#eaddc2');
-          box(face,1,.08,.08,0,.07,.025,'#a79a7e');
+          // Light cornices belong at roof edges, rather than framing every room.
+          if(!blocks[key(x,y+1,z)])box(face,1,.045,.065,0,.96,.018,'#eaddc2');
+          if(y===0)box(face,1,.07,.055,0,.07,.015,'#a79a7e');
+          else box(face,1,.025,.025,0,.025,.008,'#c8b99b');
           for(const side of [-1,1]){
             if(contiguous(side))continue;
-            box(face,.075,.84,.08,side*.45,.5,.025,timber[b.wood]);
-            if(y===0)for(let h=.18;h<.9;h+=.2)box(face,.13,.09,.1,side*.43,h,.035,'#d6cbb1');
+            box(face,.04,.87,.04,side*.475,.51,.012,timber[b.wood]);
+            if(y===0)for(let h=.23;h<.9;h+=.3)box(face,.095,.07,.05,side*.46,h,.02,'#d0c5aa');
           }
         }else for(let h=.17;h<1;h+=.19)box(face,1,.017,.016,0,h,0,'#987951');
         const terraceDoor=y>0&&(blocks[key(x+dx,y,z+dz)]?.type==='balcony'||roofForms.get(key(x+dx,y-1,z+dz))?.kind==='terrace');
@@ -436,19 +448,24 @@ function rebuild(){
           box(face,estate?.34:.24,.61,.045,0,.305,.09,'#6c5942');
           box(face,.035,.035,.04,.08,.29,.12,'#e1c98c');
           if(estate){
-            for(const side of [-1,1])box(face,.065,.66,.12,side*.22,.33,.09,'#eaddc2');
-            box(face,.54,.09,.18,0,.69,.09,'#eaddc2');
+            for(const side of [-1,1])box(face,.045,.66,.075,side*.22,.33,.07,'#eaddc2');
+            box(face,.52,.055,.19,0,.68,.08,'#b5a286');
+            if(y===0){
+              const canopy=box(face,.6,.045,.26,0,.75,.11,roofs[b.roof]);canopy.rotation.x=.12;
+              for(const side of [-1,1])box(face,.045,.1,.06,side*.24,.68,.12,timber[b.wood]);
+            }
             box(face,.22,.12,.04,0,.54,.12,'#f2d292');
           }
         }else{
-          const positions=[0];
+          const positions=quietBay?[]:estate&&entryBay&&y>0?[-.15,.15]:[0];
           for(const wx of positions){
-            const w=estate?.43:.3,h=estate?.46:.36,depth=lodge?.105:.035;
-            box(face,w+.07,h+.07,.055,wx,.56,depth,'#735e45');
+            const w=estate?(positions.length===2?.17:isFront?.27:.21):.3,h=estate?(isFront?.34:.27):.36,depth=lodge?.105:.025;
+            const trim=estate?.035:.07;
+            box(face,w+trim,h+trim,estate?.035:.055,wx,.56,depth,'#735e45');
             box(face,w,h,.03,wx,.56,depth+.04,'#f2d292');
-            box(face,.025,h,.035,wx,.56,depth+.06,'#957b50');
-            box(face,w,.025,.035,wx,.56,depth+.06,'#957b50');
-            if(estate){box(face,w+.1,.055,.12,wx,.29,.06,'#eaddc2');box(face,w+.1,.065,.09,wx,.83,.06,'#eaddc2');}
+            box(face,estate?.014:.025,h,.025,wx,.56,depth+.06,'#957b50');
+            if(!estate||isFront)box(face,w,estate?.014:.025,.025,wx,.56,depth+.06,'#957b50');
+            if(estate)box(face,w+.06,.025,.075,wx,.56-h/2-.025,.045,'#d9caae');
           }
         }
         // Brackets under cantilevered rooms, leaving walkable space below.

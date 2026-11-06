@@ -116,3 +116,10 @@ test('connected houses share one entrance and prefer an adjacent path',async()=>
  b['-1,0,0']={type:'path'};plan=entrancePlan(b);assert.equal(plan.size,1);assert.equal(plan.get('0,0,0').dx,-1);
  delete b['1,0,0'];assert.equal(entrancePlan(b).size,2);
 });
+
+test('tree species persist and legacy or invalid species become pine',()=>{
+ const blocks={};for(const [i,species]of ['larch','birch','pine','redwood','unknown'].entries())blocks[key(i,0,0)]={type:'tree',species};
+ blocks['5,0,0']={type:'tree'};
+ const result=normalize({blocks}).blocks;
+ for(const [i,species]of ['larch','birch','pine','redwood','pine','pine'].entries())assert.equal(result[key(i,0,0)].species,species);
+});

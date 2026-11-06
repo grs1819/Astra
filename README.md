@@ -167,3 +167,10 @@ pinch two fingers to zoom. A quick, stationary single-finger tap edits the town.
 Multi-touch gestures, drags, and long presses cannot place blocks. Select Remove
 for touch deletion. Mouse controls remain middle-drag orbit, Shift-middle-drag
 pan, and wheel zoom. Tilt stays above the ground while allowing a wider view.
+
+### Tree species and compact header
+Select Tree (3) to choose Pine, Larch, Birch, or Redwood. All species are available
+immediately, require dry ground, and persist through autosave and undo. Old trees
+load as pines. The surrounding forest deterministically mixes all four species.
+The header now uses a smaller logo and a compact population chip on desktop and
+mobile, leaving more space for the town.

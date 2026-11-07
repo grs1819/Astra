@@ -55,7 +55,7 @@ export function createVillagers(scene,material){
     walkGraph=buildNavigation(blocks,water);bikeGraph=buildNavigation(blocks,water,true);
     attractions=[];fishingSpots=new Map();
     for(const [k,block]of Object.entries(blocks)){
-      const [x,y,z]=k.split(',').map(Number);if(y!==0||!block.role||block.role==='home')continue;
+      const [x,y,z]=k.split(',').map(Number);if(y!==0||(!(block.type==='campProp'&&['fire','table'].includes(block.kind))&&(!block.role||block.role==='home')))continue;
       for(const [dx,dz]of [[0,1],[1,0],[-1,0],[0,-1]]){const id=waterKey(x+dx,z+dz);if(walkGraph.has(id))attractions.push(id);}
       if(['fishing','boathouse'].includes(block.role))for(const [id,node]of walkGraph){
         if(Math.abs(node.x-x)+Math.abs(node.z-z)>4)continue;

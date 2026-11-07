@@ -11,7 +11,7 @@ export function normalize(data, legacy=false) {
   const blocks = {};
   const source = legacy ? data?.cells : data?.blocks;
   if (source && typeof source==='object') for(const [k,b] of Object.entries(source)) {
-    if(!b || !['house','balcony','tree','path','camp'].includes(b.type)) continue;
+    if(!b || !['house','balcony','tree','path','camp','campProp'].includes(b.type)) continue;
     const parts=k.split(',').map(Number);
     if(parts.length!==(legacy?2:3)) continue;
     const [x,y,z]=legacy?[parts[0],0,parts[1]]:parts;
@@ -22,17 +22,18 @@ export function normalize(data, legacy=false) {
       if(b.type==='balcony'&&['pergola','roofed'].includes(b.cover))blocks[key(x,y+i,z)].cover=b.cover;
       if(b.type==='path')blocks[key(x,y+i,z)].surface=b.surface==='cobble'?'cobble':'gravel';
       if(b.type==='tree')blocks[key(x,y+i,z)].species=TREE_TYPES.includes(b.species)?b.species:'pine';
+      if(b.type==='campProp')blocks[key(x,y+i,z)].kind=['fire','seating','table','lantern'].includes(b.kind)?b.kind:'fire';
       if(b.type==='camp')blocks[key(x,y+i,z)].stage=Math.max(1,Math.min(3,Math.trunc(Number(b.stage)||1)));
     }
   }
   return {blocks,water:normalizeWater(data?.water,LIMIT),peak:Math.max(Number.isFinite(data?.peak)?data.peak:0,cottageCount(blocks))};
 }
 export function canPlace(blocks,x,y,z,type,water={}) {
-  if(['tree','camp'].includes(type)&&water[waterKey(x,z)])return false;
+  if(['tree','camp','campProp'].includes(type)&&water[waterKey(x,z)])return false;
   if(!inside(x,y,z)) return false;
   const existing=blocks[key(x,y,z)];
   if(existing && !(type==='house' && existing.type==='balcony')) return false;
-  if(['path','tree','camp'].includes(type)) return y===0;
+  if(['path','tree','camp','campProp'].includes(type)) return y===0;
   if(y===0) return true;
   const below=blocks[key(x,y-1,z)];
   return below?.type==='house' || directions.some(([dx,,dz])=>blocks[key(x+dx,y,z+dz)]?.type==='house');
@@ -220,4 +221,31 @@ export function deckCoverPlan(blocks){
   for(const k of tiles)plan.set(k,form);
  }
  return plan;
+}
+
+// All touching porch tiles share an attachment, regardless of cover style.
+export function porchFinishPlan(blocks){
+ const pending=new Set(Object.keys(blocks).filter(k=>blocks[k].type==='balcony').sort()),plan=new Map(),architecture=architecturePlan(blocks);
+ while(pending.size){
+  const first=pending.values().next().value,tiles=[first];pending.delete(first);
+  let attached=null;
+  for(let i=0;i<tiles.length;i++){
+   const [x,y,z]=tiles[i].split(',').map(Number);
+   for(const [dx,,dz]of directions){
+    const n=key(x+dx,y,z+dz);
+    if(pending.delete(n))tiles.push(n);
+    if(!attached&&blocks[n]?.type==='house')attached=n;
+   }
+  }
+  let roofSource=attached;
+  if(attached){const [x,y,z]=attached.split(',').map(Number);let top=y;while(blocks[key(x,top+1,z)]?.type==='house')top++;roofSource=key(x,top,z);}
+  const finish={wood:attached?blocks[attached].wood:'oak',roof:roofSource?blocks[roofSource].roof:'moss',tier:architecture.get(attached)?.tier||'cottage'};
+  for(const tile of tiles)plan.set(tile,finish);
+ }
+ return plan;
+}
+
+export function campFacing(blocks,x,z,preferFire=false){
+ const candidates=Object.entries(blocks).filter(([k,b])=>k.split(',')[1]==='0'&&(preferFire?b.type==='campProp'&&b.kind==='fire':b.type==='path')).map(([k])=>k.split(',').map(Number)).filter(([a,,c])=>Math.abs(a-x)+Math.abs(c-z)<=4).sort((a,b)=>((a[0]-x)**2+(a[2]-z)**2)-((b[0]-x)**2+(b[2]-z)**2)||a[0]-b[0]||a[2]-b[2]);
+ return candidates.length?Math.atan2(candidates[0][0]-x,candidates[0][2]-z):0;
 }

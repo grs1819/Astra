@@ -1,3 +1,4 @@
+import {terrainHeight} from './terrain.js';
 import {LIMIT,key,directions} from './town.js';
 import {waterKey} from './water.js';
 // Connections are shared by path geometry and resident routing.
@@ -19,12 +20,12 @@ export function dockOpen(blocks,x,z,dx,dz){
   const alongX=links.some(([a,b])=>a&&!b);
   return alongX?dz===0:dx===0;
 }
-export function buildNavigation(blocks,water,cycling=false){
+export function buildNavigation(blocks,water,cycling=false,terrain={}){
   const nodes=new Map();
   for(let x=-LIMIT;x<=LIMIT;x++)for(let z=-LIMIT;z<=LIMIT;z++){
     const block=blocks[key(x,0,z)],wet=!!water[waterKey(x,z)],path=block?.type==='path';
     if((block&&!path)||(wet&&!path)||(cycling&&!path))continue;
-    nodes.set(waterKey(x,z),{x,z,y:path?.1:0,path,neighbors:[]});
+    nodes.set(waterKey(x,z),{x,z,y:terrainHeight(terrain,x,z)+(path?.1:0),path,neighbors:[]});
   }
   function bridgeAllows(a,b){
     if(!water[waterKey(a.x,a.z)])return true;
@@ -32,11 +33,11 @@ export function buildNavigation(blocks,water,cycling=false){
   }
   for(const node of nodes.values())for(const [dx,,dz]of directions){
     const id=waterKey(node.x+dx,node.z+dz),next=nodes.get(id);
-    if(next&&bridgeAllows(node,next)&&bridgeAllows(next,node))node.neighbors.push(id);
+    if(next&&Math.abs(next.y-node.y)<=(cycling?.26:.51)&&bridgeAllows(node,next)&&bridgeAllows(next,node))node.neighbors.push(id);
   }
   for(const node of nodes.values())if(node.path)for(const [dx,dz]of pathLinks(blocks,node.x,node.z)){
     if(!dx||!dz)continue;
-    const id=waterKey(node.x+dx,node.z+dz);if(nodes.has(id))node.neighbors.push(id);
+    const id=waterKey(node.x+dx,node.z+dz);if(nodes.has(id)&&Math.abs(nodes.get(id).y-node.y)<=(cycling?.26:.51))node.neighbors.push(id);
   }
   return nodes;
 }

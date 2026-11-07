@@ -5,7 +5,7 @@ const ref=process.argv[2];
 if(!ref)throw new Error('Usage: node scripts/stage-beta.mjs <tested-source-commit-or-branch>');
 const git=(...args)=>execFileSync('git',args,{maxBuffer:32*1024*1024});
 const commit=git('rev-parse','--verify',`${ref}^{commit}`).toString().trim();
-const files=git('ls-tree','-r','--name-only',commit).toString().trim().split('\n').filter(p=>/^(index\.html|style\.css|app\.js|town\.js|water\.js|water-view\.js|navigation\.js|villagers\.js)$/.test(p)||/^(assets|vendor)\//.test(p));
+const files=git('ls-tree','-r','--name-only',commit).toString().trim().split('\n').filter(p=>/^(index\.html|style\.css|app\.js|town\.js|water\.js|water-view\.js|navigation\.js|villagers\.js|terrain\.js)$/.test(p)||/^(assets|vendor)\//.test(p));
 if(!files.includes('index.html')||!files.includes('app.js'))throw new Error('Source is missing game files');
 const snapshot=files.map(path=>{
   let data=git('show',`${commit}:${path}`);

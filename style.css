@@ -150,3 +150,17 @@ header{top:16px;left:20px;right:20px;gap:12px}
 .terrain-actions button[aria-pressed="true"]{background:#dfe8d3;border-color:#8ca67b;color:var(--pine)}
 @media(max-width:600px){.tools{grid-template-columns:repeat(3,minmax(0,1fr))}.terrain-options{grid-template-columns:1fr}}
 @media(max-height:500px) and (pointer:coarse){.tools{grid-template-columns:repeat(5,minmax(0,1fr))}.tool{flex-direction:row}.terrain-options{grid-template-columns:1fr}}
+
+/* Help is optional header content, without a permanent footer row. */
+#help-panel{margin-top:8px;padding:8px 4px;border-top:1px solid #dee3d5;font-size:12px;line-height:1.5}
+@media(max-width:600px),(max-height:500px) and (pointer:coarse){
+ .dock-panel{padding:6px 8px}
+ .dock-heading{margin-bottom:2px;gap:4px}
+ .dock-heading h2{font-size:10px;white-space:nowrap}
+ .dock-actions{gap:3px}
+ .dock-actions .secondary{padding:4px 7px;gap:4px}
+ .tools{grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+ .tool{flex-direction:column;gap:2px;min-height:44px;padding:3px 1px;font-size:10px}
+ .tool-icon{width:19px;height:19px}
+ .palette{gap:4px}
+}

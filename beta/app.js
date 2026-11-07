@@ -855,7 +855,13 @@ function selectTool(value){tool=value;$('#water-options').hidden=value!=='water'
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>selectTool(b.dataset.tool));
 $('#undo').onclick=undo;
 const dock=$('.dock'), dockMenu=$('#build-menu'), dockToggle=$('#dock-toggle');
+function setHelp(open){
+  $('#help-panel').hidden=!open;
+  $('#help-toggle').setAttribute('aria-expanded',String(open));
+  if(open)setTasks(false);
+}
 function setTasks(open){
+  if(open)setHelp(false);
   $('#tasks-panel').hidden=!open;
   $('#tasks-toggle').setAttribute('aria-expanded',String(open));
 }
@@ -868,7 +874,7 @@ function setDock(open){
   dockToggle.setAttribute('aria-label',open?'Close building menu':'Open building menu');
   dockToggle.title=(open?'Close':'Open')+' building menu (B)';
   $('#dock-caption').innerHTML=open?'A little room to create':'Build your town <kbd>B</kbd>';
-  if(!open)setTasks(false);
+  if(!open){setTasks(false);setHelp(false);}
   // Restart the short logo bounce and water ripple on each toggle.
   dockToggle.classList.remove('animating');
   void dockToggle.offsetWidth;
@@ -883,6 +889,7 @@ document.querySelectorAll('[data-terrain]').forEach(button=>button.onclick=()=>{
  $('#sample-height').hidden=terrainAction!=='level';
 });
 $('#sample-height').onclick=()=>{levelTarget=null;$('#terrain-level').textContent='Tap land to sample a new height.';};
+$('#help-toggle').onclick=()=>setHelp($('#help-panel').hidden);
 $('#tasks-toggle').onclick=()=>setTasks($('#tasks-panel').hidden);
 addEventListener('keydown',e=>{
   if(e.key==='Escape' && dock.dataset.open==='true'){e.preventDefault();setDock(false);return;}

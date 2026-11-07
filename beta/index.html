@@ -27,7 +27,7 @@
           <div class="dock-heading">
             <h2>Build &amp; shape</h2>
             <div class="dock-actions"><button id="undo" class="secondary" disabled>↶ Undo</button>
-            <button id="tasks-toggle" class="secondary" aria-expanded="false" aria-controls="tasks-panel">✧ <span>Tasks</span><span id="discovery-count">0 / 4</span></button></div>
+            <button id="tasks-toggle" class="secondary" aria-expanded="false" aria-controls="tasks-panel">✧ <span>Tasks</span><span id="discovery-count">0 / 4</span></button><button id="help-toggle" class="secondary" aria-expanded="false" aria-controls="help-panel">? Help</button></div>
           </div>
           <section id="tasks-panel" class="tasks-panel" aria-label="Village tasks and discoveries" hidden>
             <div class="progress-card">
@@ -100,8 +100,7 @@
               <p class="water-growth">4 tiles: pebbles · 10: boulders · 18: plants</p>
             </div>
           </div>
-          <div class="dock-bottom">
-            <details class="help"><summary>How to play</summary><div class="help-content">
+          <section id="help-panel" class="help-content" aria-label="How to play" hidden>
               <p><strong>Outdoors:</strong> select Outdoors (7) and click dry ground for a lean-to. Click it again for a tent, then a glamping shelter. Adjacent camp tiles merge into one larger shelter. Choose Campfire, Seating, Picnic table, or Lantern to furnish your campsite yourself. Each piece occupies one dry ground tile. Role (8) assigns a purpose to existing buildings. Right-click removes; Undo restores.</p>
               <p><strong>Terrain:</strong> select Terrain (5), then Raise, Lower, or Level. Level samples a height on the first tap, then applies it. Keep structures on level clearings and leave water at its original height. Undo restores terrain too.</p>
               <p><strong>Build:</strong> click roofs to grow up, walls to grow out. Alt-click to repaint. Right-click to remove.</p>
@@ -114,8 +113,7 @@
               <p><strong>Water:</strong> select Water (4), then Stream, River, or Lake. Click ground to add tiles; connected bodies gain detail as they grow. Cottages stand on stilts and paths become footbridges. Water can also be added beneath existing cottages and paths. With Water selected, right-click removes water only. Remove trees before adding water.</p>
               <p><strong>Village life:</strong> three cottages welcome residents. Connect at least three path tiles near a home to invite cyclists. Paths and footbridges give everyone safe routes around town.</p>
               <p><strong>Shortcuts:</strong> 1–9 choose tools; B opens the menu; Escape closes it; Ctrl / Cmd + Z undoes.</p>
-            </div></details>
-          </div>
+          </section>
         </div>
       </div>
     </div>

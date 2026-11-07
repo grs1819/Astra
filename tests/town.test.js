@@ -162,3 +162,16 @@ test('porches inherit finishes across open and covered tiles and update on attac
  delete b['0,0,-1'];
  assert.deepEqual(porchFinishPlan(b).get('1,0,0'),{wood:'oak',roof:'moss',tier:'cottage'});
 });
+
+test('camp furniture persists, stays separate from shelters, and requires dry ground',async()=>{
+ const {campFacing,campsitePlan}=await import('../town.js');
+ const input={'0,0,0':{type:'camp',stage:2},'1,0,0':{type:'campProp',kind:'fire'},'2,0,0':{type:'campProp',kind:'seating'},'3,0,0':{type:'campProp',kind:'table'},'4,0,0':{type:'campProp',kind:'lantern'}};
+ const b=normalize({blocks:input}).blocks;
+ for(const k of Object.keys(input))assert.equal(b[k].type,input[k].type);
+ for(const k of Object.keys(input).slice(1))assert.equal(b[k].kind,input[k].kind);
+ assert.equal(campsitePlan(b).get('0,0,0').size,1);
+ assert.equal(canPlace({},0,1,0,'campProp'),false);
+ assert.equal(canPlace({},0,0,0,'campProp',{'0,0':'lake'}),false);
+ assert.equal(canPlace({},0,0,0,'campProp'),true);
+ assert.equal(campFacing(b,2,0,true),-Math.PI/2);
+});

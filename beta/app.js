@@ -1,4 +1,4 @@
-import {terrainHeight,terrainLevel,levelSite,editTerrain,TERRAIN_STEP} from './terrain.js';
+import {terrainHeight,terrainLevel,levelSite,editTerrain,TERRAIN_STEP,borderHeight} from './terrain.js';
 import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
@@ -67,8 +67,31 @@ function tree(parent,x,z,scale=1,species='pine'){
   }
   return g;
 }
-const forest=new THREE.Group();scene.add(forest);
-for(let x=-15;x<=15;x++)for(let z=-15;z<=15;z++)if(Math.max(Math.abs(x),Math.abs(z))>10&&rand(x,z)>.57)tree(forest,x,z,.8+rand(z,x)*.4,['pine','larch','birch','redwood'][Math.min(3,Math.floor(rand(x+33,z-19)*4))]);
+const forest=new THREE.Group();forest.name='border-landscape';scene.add(forest);
+const borderGeometry=new THREE.PlaneGeometry(54,54,108,108);borderGeometry.rotateX(-Math.PI/2);
+const borderPositions=borderGeometry.attributes.position,borderColors=[];
+for(let i=0;i<borderPositions.count;i++){
+ const x=borderPositions.getX(i),z=borderPositions.getZ(i),h=borderHeight(x,z);
+ borderPositions.setY(i,h-.035);
+ const slope=Math.hypot(borderHeight(x+.1,z)-borderHeight(x-.1,z),borderHeight(x,z+.1)-borderHeight(x,z-.1))/.2;
+ const tint=new THREE.Color('#a9bc94').lerp(new THREE.Color('#969789'),Math.min(1,Math.max(0,(h-2.2)*.5,slope-.5)));
+ borderColors.push(tint.r,tint.g,tint.b);
+}
+borderGeometry.setAttribute('color',new THREE.Float32BufferAttribute(borderColors,3));borderGeometry.computeVertexNormals();
+const borderLand=new THREE.Mesh(borderGeometry,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));borderLand.name='border-hills';borderLand.receiveShadow=true;forest.add(borderLand);
+for(let x=-18;x<=18;x++)for(let z=-18;z<=18;z++){
+ if(Math.max(Math.abs(x),Math.abs(z))<=10||rand(x,z)<=.64)continue;
+ const h=borderHeight(x,z);if(h>2.8&&rand(x+9,z)<.7)continue;
+ const plant=tree(forest,x,z,.7+rand(z,x)*.4,['pine','larch','birch','redwood'][Math.min(3,Math.floor(rand(x+33,z-19)*4))]);plant.position.y=h;
+}
+// Shared rock geometry keeps the scenery inexpensive on phones.
+const borderRockGeometry=new THREE.DodecahedronGeometry(1,0);
+for(let x=-22;x<=22;x+=2)for(let z=-22;z<=22;z+=2){
+ if(Math.max(Math.abs(x),Math.abs(z))<12||rand(x+7,z-11)<.79)continue;
+ const xx=x+(rand(z,x)-.5)*.7,zz=z+(rand(x,z)-.5)*.7,h=borderHeight(xx,zz),size=.2+rand(x+2,z)*.55;
+ const rock=new THREE.Mesh(borderRockGeometry,material(h>2?'#929589':'#9da28c'));rock.name='border-boulder';
+ rock.position.set(xx,h+size*.3,zz);rock.scale.set(size*1.25,size*.8,size);rock.rotation.set(.15,rand(z+3,x)*Math.PI,.12);rock.castShadow=true;rock.receiveShadow=true;forest.add(rock);
+}
 let state={blocks:{},water:{},peak:0};
 try{const current=localStorage.getItem('stillwater-beta-v2');state=current?normalize(JSON.parse(current)):normalize(JSON.parse(localStorage.getItem('stillwater-beta-v1')),true);}catch{}
 let water=state.water,terrain=state.terrain||{},levelTarget=null;
@@ -547,7 +570,8 @@ function pathTile(parent,x,z){
   }
 }
 
-function terrainMode(){return tool==='camp'&&['raise','lower','level'].includes($('#camp-piece').value)?$('#camp-piece').value:null;}
+let terrainAction='raise';
+function terrainMode(){return tool==='terrain'?terrainAction:null;}
 function rebuildTerrain(){
  clear(clearing);
  for(let x=-LIMIT-1;x<=LIMIT+1;x++)for(let z=-LIMIT-1;z<=LIMIT+1;z++){
@@ -827,7 +851,7 @@ canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('pointerleave',()=>ghost.visible=false);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=value!=='house';$('#role-options').hidden=value!=='role';$('#tree-options').hidden=value!=='tree';$('#path-options').hidden=value!=='path';$('#deck-options').hidden=value!=='balcony';$('#camp-options').hidden=value!=='camp';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
+function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=value!=='house';$('#role-options').hidden=value!=='role';$('#tree-options').hidden=value!=='tree';$('#path-options').hidden=value!=='path';$('#deck-options').hidden=value!=='balcony';$('#camp-options').hidden=value!=='camp';$('#terrain-options').hidden=value!=='terrain';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>selectTool(b.dataset.tool));
 $('#undo').onclick=undo;
 const dock=$('.dock'), dockMenu=$('#build-menu'), dockToggle=$('#dock-toggle');
@@ -852,7 +876,12 @@ function setDock(open){
 }
 dockToggle.addEventListener('animationend',()=>dockToggle.classList.remove('animating'));
 dockToggle.onclick=()=>setDock(dock.dataset.open!=='true');
-$('#camp-piece').addEventListener('change',()=>{levelTarget=null;$('#terrain-level').hidden=!terrainMode();$('#terrain-level').textContent=$('#camp-piece').value==='level'?'Tap land to sample its height, then tap to level.':'Tap dry land to change its height.';$('#sample-height').hidden=$('#camp-piece').value!=='level';});
+document.querySelectorAll('[data-terrain]').forEach(button=>button.onclick=()=>{
+ terrainAction=button.dataset.terrain;levelTarget=null;ghost.visible=false;
+ document.querySelectorAll('[data-terrain]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+ $('#terrain-level').textContent=terrainAction==='level'?'Tap land to sample its height, then tap to level.':'Tap land once per height step.';
+ $('#sample-height').hidden=terrainAction!=='level';
+});
 $('#sample-height').onclick=()=>{levelTarget=null;$('#terrain-level').textContent='Tap land to sample a new height.';};
 $('#tasks-toggle').onclick=()=>setTasks($('#tasks-panel').hidden);
 addEventListener('keydown',e=>{
@@ -863,7 +892,7 @@ addEventListener('keydown',e=>{
 });
 function orbit(delta){const offset=camera.position.clone().sub(controls.target);offset.applyAxisAngle(new THREE.Vector3(0,1,0),delta);camera.position.copy(controls.target).add(offset);controls.update();}
 controls.addEventListener('change',()=>{ghost.visible=false;});
-addEventListener('keydown',e=>{if(['SELECT','INPUT'].includes(document.activeElement.tagName))return;if(['1','2','3','4','5','6','7','8'].includes(e.key))selectTool(['house','balcony','path','water','tree','camp','role','erase'][Number(e.key)-1]);if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}if(e.key.toLowerCase()==='q')orbit(Math.PI/8);if(e.key.toLowerCase()==='e')orbit(-Math.PI/8);});
+addEventListener('keydown',e=>{if(['SELECT','INPUT'].includes(document.activeElement.tagName))return;if(['1','2','3','4','5','6','7','8','9'].includes(e.key))selectTool(['house','balcony','path','water','terrain','tree','camp','role','erase'][Number(e.key)-1]);if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}if(e.key.toLowerCase()==='q')orbit(Math.PI/8);if(e.key.toLowerCase()==='e')orbit(-Math.PI/8);});
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);resize();
 updateUI();rebuild();save();
 renderer.setAnimationLoop(t=>{

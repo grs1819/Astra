@@ -144,3 +144,9 @@ header{top:16px;left:20px;right:20px;gap:12px}
 }
 
 .terrain-hint{font-size:11px;line-height:1.4;grid-column:1/-1}#sample-height{grid-column:1/-1;min-height:44px}
+
+.terrain-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;grid-column:1/-1}
+.terrain-actions button{min-height:44px;padding:6px;font-size:12px}
+.terrain-actions button[aria-pressed="true"]{background:#dfe8d3;border-color:#8ca67b;color:var(--pine)}
+@media(max-width:600px){.tools{grid-template-columns:repeat(3,minmax(0,1fr))}.terrain-options{grid-template-columns:1fr}}
+@media(max-height:500px) and (pointer:coarse){.tools{grid-template-columns:repeat(5,minmax(0,1fr))}.tool{flex-direction:row}.terrain-options{grid-template-columns:1fr}}

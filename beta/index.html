@@ -65,7 +65,8 @@
             </div>
             <div id="camp-options" class="water-options" hidden>
               <label for="camp-piece">OUTDOOR ITEM</label>
-              <select id="camp-piece"><option value="shelter">Shelter</option><option value="fire">Campfire</option><option value="seating">Seating</option><option value="table">Picnic table</option><option value="lantern">Lantern</option></select>
+              <select id="camp-piece"><option value="shelter">Shelter</option><option value="fire">Campfire</option><option value="seating">Seating</option><option value="table">Picnic table</option><option value="lantern">Lantern</option><optgroup label="Terrain"><option value="raise">Raise land</option><option value="lower">Lower land</option><option value="level">Level land</option></optgroup></select>
+              <span id="terrain-level" class="terrain-hint" role="status" hidden></span><button id="sample-height" class="secondary" hidden>Pick another height</button>
               <p>Place pieces on dry ground. Tap a shelter to upgrade it; neighboring shelters join. Seating faces nearby fires. Small details appear as your camp grows.</p>
             </div>
             <div id="path-options" class="water-options" hidden>
@@ -93,6 +94,7 @@
           <div class="dock-bottom">
             <details class="help"><summary>How to play</summary><div class="help-content">
               <p><strong>Outdoors:</strong> select Outdoors (6) and click dry ground for a lean-to. Click it again for a tent, then a glamping shelter. Adjacent camp tiles merge into one larger shelter. Choose Campfire, Seating, Picnic table, or Lantern to furnish your campsite yourself. Each piece occupies one dry ground tile. Role (7) assigns a purpose to existing buildings. Right-click removes; Undo restores.</p>
+              <p><strong>Terrain:</strong> in Outdoors, choose Raise, Lower, or Level land. Level samples a height on the first tap, then applies it. Keep structures on level clearings and leave water at its original height. Undo restores terrain too.</p>
               <p><strong>Build:</strong> click roofs to grow up, walls to grow out. Alt-click to repaint. Right-click to remove.</p>
               <p><strong>Touch:</strong> drag one finger to orbit and tilt. Drag two fingers to pan; pinch to zoom. A quick tap builds; select Remove to erase. Camera gestures never place blocks.</p>
               <p><strong>Explore:</strong> middle-drag to orbit and tilt, Shift + middle-drag to pan, scroll to zoom. Q / E rotate; R recenters.</p>

@@ -142,3 +142,5 @@ header{top:16px;left:20px;right:20px;gap:12px}
  .dock-heading h2{display:none}
  .dock-heading{justify-content:flex-end}
 }
+
+.terrain-hint{font-size:11px;line-height:1.4;grid-column:1/-1}#sample-height{grid-column:1/-1;min-height:44px}

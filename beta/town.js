@@ -1,3 +1,4 @@
+import {normalizeTerrain} from './terrain.js';
 import {normalizeWater,waterKey} from './water.js';
 export const TREE_TYPES=['pine','larch','birch','redwood'];
 export const ROLES=['home','fishing','supply','cafe','inn','workshop','boathouse'];
@@ -26,7 +27,7 @@ export function normalize(data, legacy=false) {
       if(b.type==='camp')blocks[key(x,y+i,z)].stage=Math.max(1,Math.min(3,Math.trunc(Number(b.stage)||1)));
     }
   }
-  return {blocks,water:normalizeWater(data?.water,LIMIT),peak:Math.max(Number.isFinite(data?.peak)?data.peak:0,cottageCount(blocks))};
+  return {terrain:normalizeTerrain(data?.terrain),blocks,water:normalizeWater(data?.water,LIMIT),peak:Math.max(Number.isFinite(data?.peak)?data.peak:0,cottageCount(blocks))};
 }
 export function canPlace(blocks,x,y,z,type,water={}) {
   if(['tree','camp','campProp'].includes(type)&&water[waterKey(x,z)])return false;

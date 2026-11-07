@@ -1,3 +1,4 @@
+import {terrainHeight} from './terrain.js';
 import * as THREE from 'three';
 import {buildNavigation,reachable,findRoute} from './navigation.js';
 import {waterKey} from './water.js';
@@ -49,10 +50,12 @@ export function createVillagers(scene,material){
     const fishingRod=new THREE.Mesh(geometries.limb,material('#795b39'));fishingRod.scale.set(.009,.65,.009);fishingRod.position.set(.08,.38,.24);fishingRod.rotation.x=.85;fishingRod.visible=false;figure.add(fishingRod);
     return {root,figure,arms,legs,wheels,cranks,pedalLegs,bike,rod:fishingRod};
   }
-  function rebuild(blocks,water,unlocked){
+  let groundTerrain={};
+  function rebuild(blocks,water,unlocked,terrain={}){
+    groundTerrain=terrain;
     // Geometry and materials are shared; rebuilding removes instances only.
     group.clear();agents=[];lastTime=null;
-    walkGraph=buildNavigation(blocks,water);bikeGraph=buildNavigation(blocks,water,true);
+    walkGraph=buildNavigation(blocks,water,false,terrain);bikeGraph=buildNavigation(blocks,water,true,terrain);
     attractions=[];fishingSpots=new Map();
     for(const [k,block]of Object.entries(blocks)){
       const [x,y,z]=k.split(',').map(Number);if(y!==0||(!(block.type==='campProp'&&['fire','table'].includes(block.kind))&&(!block.role||block.role==='home')))continue;
@@ -105,7 +108,7 @@ export function createVillagers(scene,material){
       const speed=a.bike?.7:.32+(a.index%3)*.035;a.progress=Math.min(1,a.progress+dt*speed/Math.hypot(end.x-start.x,end.z-start.z));
       const x=THREE.MathUtils.lerp(start.x,end.x,a.progress),z=THREE.MathUtils.lerp(start.z,end.z,a.progress);
       // Feet and wheels follow the actual tile height, including raised bridge decks.
-      a.root.position.set(x,THREE.MathUtils.lerp(start.y,end.y,a.progress),z);
+      a.root.position.set(x,terrainHeight(groundTerrain,x,z)+THREE.MathUtils.lerp(start.y-terrainHeight(groundTerrain,start.x,start.z),end.y-terrainHeight(groundTerrain,end.x,end.z),a.progress),z);
       const heading=Math.atan2(end.x-start.x,end.z-start.z);
       a.root.rotation.y+=Math.atan2(Math.sin(heading-a.root.rotation.y),Math.cos(heading-a.root.rotation.y))*Math.min(1,dt*10);
       a.phase+=dt*speed*(a.bike?7:16);

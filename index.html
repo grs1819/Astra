@@ -27,7 +27,7 @@
           <div class="dock-heading">
             <h2>Build &amp; shape</h2>
             <div class="dock-actions"><button id="undo" class="secondary" disabled>↶ Undo</button>
-            <button id="tasks-toggle" class="secondary" aria-expanded="false" aria-controls="tasks-panel">✧ <span>Tasks</span><span id="discovery-count">0 / 4</span></button></div>
+            <button id="tasks-toggle" class="secondary" aria-expanded="false" aria-controls="tasks-panel">✧ <span>Tasks</span><span id="discovery-count">0 / 4</span></button><button id="help-toggle" class="secondary" aria-expanded="false" aria-controls="help-panel">? Help</button></div>
           </div>
           <section id="tasks-panel" class="tasks-panel" aria-label="Village tasks and discoveries" hidden>
             <div class="progress-card">
@@ -46,10 +46,11 @@
                 <button class="tool" data-tool="balcony" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h18v2h3M3 18V9m17 9V9M3 11h17M11 11v7"/></svg>Porch <kbd>2</kbd></button>
                 <button class="tool" data-tool="path" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3c13 4-12 9-4 18M13 3c13 4-12 9-4 18"/></svg>Path <kbd>3</kbd></button>
                 <button class="tool" data-tool="water" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9c7-5 13 5 20 0M3 16c6-4 12 4 18 0"/></svg>Water <kbd>4</kbd></button>
-                <button class="tool" data-tool="tree" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2-7 7q-1 1 1 1h2l-5 7q-1 1 1 1h16q2 0 1-1l-5-7h2q2 0 1-1L12 2ZM12 18v4"/></svg>Tree <kbd>5</kbd></button>
-                <button class="tool" data-tool="camp" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21q-2 0-1-2L11 3q1-2 2 0l9 16q1 2-1 2h-6l-3-6-3 6Z"/></svg>Outdoors <kbd>6</kbd></button>
-                <button class="tool" data-tool="role" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 4-3 6q0 4 4 4 3 0 3-3 0 3 3 3t3-3q0 3 3 3 4 0 4-4l-3-6ZM4 14v7m16-7v7"/></svg>Role <kbd>7</kbd></button>
-                <button class="tool" data-tool="erase" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"/></svg>Remove <kbd>8</kbd></button>
+                <button class="tool" data-tool="terrain" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 19Q10 3 16 13M10 19q8-13 12 0ZM2 19h20"/></svg>Terrain <kbd>5</kbd></button>
+                <button class="tool" data-tool="tree" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2-7 7q-1 1 1 1h2l-5 7q-1 1 1 1h16q2 0 1-1l-5-7h2q2 0 1-1L12 2ZM12 18v4"/></svg>Tree <kbd>6</kbd></button>
+                <button class="tool" data-tool="camp" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21q-2 0-1-2L11 3q1-2 2 0l9 16q1 2-1 2h-6l-3-6-3 6Z"/></svg>Outdoors <kbd>7</kbd></button>
+                <button class="tool" data-tool="role" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 4-3 6q0 4 4 4 3 0 3-3 0 3 3 3t3-3q0 3 3 3 4 0 4-4l-3-6ZM4 14v7m16-7v7"/></svg>Role <kbd>8</kbd></button>
+                <button class="tool" data-tool="erase" aria-pressed="false"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"/></svg>Remove <kbd>9</kbd></button>
               </div>
             </div>
             <div id="building-materials" class="material-group">
@@ -62,6 +63,15 @@
               <label for="deck-cover">PORCH COVER</label>
               <select id="deck-cover"><option value="open">Open</option><option value="pergola">Pergola</option><option value="roofed">Roofed</option></select>
               <p>Choose a cover, then tap a porch to apply it. Timber and roofing match the attached building automatically. Unattached porches use oak and green roofing.</p>
+            </div>
+            <div id="terrain-options" class="water-options terrain-options" hidden>
+              <div class="terrain-actions" role="group" aria-label="Terrain action">
+                <button class="secondary" data-terrain="raise" aria-pressed="true">Raise</button>
+                <button class="secondary" data-terrain="lower" aria-pressed="false">Lower</button>
+                <button class="secondary" data-terrain="level" aria-pressed="false">Level</button>
+              </div>
+              <span id="terrain-level" class="terrain-hint" role="status">Tap land once per height step.</span>
+              <button id="sample-height" class="secondary" hidden>Pick another height</button>
             </div>
             <div id="camp-options" class="water-options" hidden>
               <label for="camp-piece">OUTDOOR ITEM</label>
@@ -90,9 +100,9 @@
               <p class="water-growth">4 tiles: pebbles · 10: boulders · 18: plants</p>
             </div>
           </div>
-          <div class="dock-bottom">
-            <details class="help"><summary>How to play</summary><div class="help-content">
-              <p><strong>Outdoors:</strong> select Outdoors (6) and click dry ground for a lean-to. Click it again for a tent, then a glamping shelter. Adjacent camp tiles merge into one larger shelter. Choose Campfire, Seating, Picnic table, or Lantern to furnish your campsite yourself. Each piece occupies one dry ground tile. Role (7) assigns a purpose to existing buildings. Right-click removes; Undo restores.</p>
+          <section id="help-panel" class="help-content" aria-label="How to play" hidden>
+              <p><strong>Outdoors:</strong> select Outdoors (7) and click dry ground for a lean-to. Click it again for a tent, then a glamping shelter. Adjacent camp tiles merge into one larger shelter. Choose Campfire, Seating, Picnic table, or Lantern to furnish your campsite yourself. Each piece occupies one dry ground tile. Role (8) assigns a purpose to existing buildings. Right-click removes; Undo restores.</p>
+              <p><strong>Terrain:</strong> select Terrain (5), then Raise, Lower, or Level. Level samples a height on the first tap, then applies it. Keep structures on level clearings and leave water at its original height. Undo restores terrain too.</p>
               <p><strong>Build:</strong> click roofs to grow up, walls to grow out. Alt-click to repaint. Right-click to remove.</p>
               <p><strong>Touch:</strong> drag one finger to orbit and tilt. Drag two fingers to pan; pinch to zoom. A quick tap builds; select Remove to erase. Camera gestures never place blocks.</p>
               <p><strong>Explore:</strong> middle-drag to orbit and tilt, Shift + middle-drag to pan, scroll to zoom. Q / E rotate; R recenters.</p>
@@ -102,9 +112,8 @@
               <p><strong>Connect:</strong> bridge two upper walls for an archway. Choose Porch (2) on ground for a porch or terrace, or click an upper wall for a balcony. Adjacent porches join and match the attached building’s timber and roof.</p>
               <p><strong>Water:</strong> select Water (4), then Stream, River, or Lake. Click ground to add tiles; connected bodies gain detail as they grow. Cottages stand on stilts and paths become footbridges. Water can also be added beneath existing cottages and paths. With Water selected, right-click removes water only. Remove trees before adding water.</p>
               <p><strong>Village life:</strong> three cottages welcome residents. Connect at least three path tiles near a home to invite cyclists. Paths and footbridges give everyone safe routes around town.</p>
-              <p><strong>Shortcuts:</strong> 1–8 choose tools; B opens the menu; Escape closes it; Ctrl / Cmd + Z undoes.</p>
-            </div></details>
-          </div>
+              <p><strong>Shortcuts:</strong> 1–9 choose tools; B opens the menu; Escape closes it; Ctrl / Cmd + Z undoes.</p>
+          </section>
         </div>
       </div>
     </div>

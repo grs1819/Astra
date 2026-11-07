@@ -1,3 +1,4 @@
+import {terrainHeight,terrainLevel,levelSite,editTerrain,TERRAIN_STEP,borderHeight} from './terrain.js';
 import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {waterKey,waterEdit} from './water.js';
@@ -66,11 +67,34 @@ function tree(parent,x,z,scale=1,species='pine'){
   }
   return g;
 }
-const forest=new THREE.Group();scene.add(forest);
-for(let x=-15;x<=15;x++)for(let z=-15;z<=15;z++)if(Math.max(Math.abs(x),Math.abs(z))>10&&rand(x,z)>.57)tree(forest,x,z,.8+rand(z,x)*.4,['pine','larch','birch','redwood'][Math.min(3,Math.floor(rand(x+33,z-19)*4))]);
+const forest=new THREE.Group();forest.name='border-landscape';scene.add(forest);
+const borderGeometry=new THREE.PlaneGeometry(54,54,108,108);borderGeometry.rotateX(-Math.PI/2);
+const borderPositions=borderGeometry.attributes.position,borderColors=[];
+for(let i=0;i<borderPositions.count;i++){
+ const x=borderPositions.getX(i),z=borderPositions.getZ(i),h=borderHeight(x,z);
+ borderPositions.setY(i,h-.035);
+ const slope=Math.hypot(borderHeight(x+.1,z)-borderHeight(x-.1,z),borderHeight(x,z+.1)-borderHeight(x,z-.1))/.2;
+ const tint=new THREE.Color('#a9bc94').lerp(new THREE.Color('#969789'),Math.min(1,Math.max(0,(h-2.2)*.5,slope-.5)));
+ borderColors.push(tint.r,tint.g,tint.b);
+}
+borderGeometry.setAttribute('color',new THREE.Float32BufferAttribute(borderColors,3));borderGeometry.computeVertexNormals();
+const borderLand=new THREE.Mesh(borderGeometry,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));borderLand.name='border-hills';borderLand.receiveShadow=true;forest.add(borderLand);
+for(let x=-18;x<=18;x++)for(let z=-18;z<=18;z++){
+ if(Math.max(Math.abs(x),Math.abs(z))<=10||rand(x,z)<=.64)continue;
+ const h=borderHeight(x,z);if(h>2.8&&rand(x+9,z)<.7)continue;
+ const plant=tree(forest,x,z,.7+rand(z,x)*.4,['pine','larch','birch','redwood'][Math.min(3,Math.floor(rand(x+33,z-19)*4))]);plant.position.y=h;
+}
+// Shared rock geometry keeps the scenery inexpensive on phones.
+const borderRockGeometry=new THREE.DodecahedronGeometry(1,0);
+for(let x=-22;x<=22;x+=2)for(let z=-22;z<=22;z+=2){
+ if(Math.max(Math.abs(x),Math.abs(z))<12||rand(x+7,z-11)<.79)continue;
+ const xx=x+(rand(z,x)-.5)*.7,zz=z+(rand(x,z)-.5)*.7,h=borderHeight(xx,zz),size=.2+rand(x+2,z)*.55;
+ const rock=new THREE.Mesh(borderRockGeometry,material(h>2?'#929589':'#9da28c'));rock.name='border-boulder';
+ rock.position.set(xx,h+size*.3,zz);rock.scale.set(size*1.25,size*.8,size);rock.rotation.set(.15,rand(z+3,x)*Math.PI,.12);rock.castShadow=true;rock.receiveShadow=true;forest.add(rock);
+}
 let state={blocks:{},water:{},peak:0};
 try{const current=localStorage.getItem('mosswood-v2');state=current?normalize(JSON.parse(current)):normalize(JSON.parse(localStorage.getItem('mosswood-v1')),true);}catch{}
-let water=state.water;
+let water=state.water,terrain=state.terrain||{},levelTarget=null;
 const waterView=createWaterView(scene,material,box);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 let waterAnalysis;
@@ -80,7 +104,7 @@ const villagers=createVillagers(scene,material);
 let targets=[];
 const milestones=[{n:3,name:'The first neighbors',text:'Villagers have found their way to Stillwater.'},{n:6,name:'A lighter touch',text:'Silver birch timber unlocked.'},{n:9,name:'Earth & ember',text:'Rust red roof color unlocked.'},{n:12,name:'A town of your own',text:'Red cedar timber and slate blue roof color unlocked.'}];
 function notify(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(notify.timer);notify.timer=setTimeout(()=>$('#toast').classList.remove('show'),4200);}
-function save(){try{localStorage.setItem('mosswood-v2',JSON.stringify({blocks,water,peak}));}catch{notify('Autosave unavailable. Keep this tab open to preserve your town.');}}
+function save(){try{localStorage.setItem('mosswood-v2',JSON.stringify({blocks,water,terrain,peak}));}catch{notify('Autosave unavailable. Keep this tab open to preserve your town.');}}
 function updateUI(){const n=cottageCount(blocks);peak=Math.max(peak,n);const next=milestones.find(m=>peak<m.n);$('#population').textContent=`${(peak>=3?n*2:0)+Object.values(blocks).filter(b=>b.type==='camp').length*2} villagers`;$('#next-title').textContent=next?.name||'Room to keep growing';$('#progress-number').textContent=next?`${n} / ${next.n}`:`${n} cottages`;$('#progress').style.width=`${next?Math.min(100,n/next.n*100):100}%`;$('#next-description').textContent=next?`Grow to ${next.n} cottage plots to make your next discovery.`:'All discoveries unlocked. Make this clearing your own.';$('#discovery-count').textContent=`${milestones.filter(m=>peak>=m.n).length} / 4`;$('#journal').innerHTML=milestones.map(m=>`<div>${peak>=m.n?'✦':'○'} ${m.n} cottages · ${m.name}</div>`).join('');for(const [id,values]of Object.entries({wood:{birch:6,cedar:12},roof:{clay:9,slate:12}}))for(const option of $(`#${id}`).options)if(values[option.value])option.disabled=peak<values[option.value];$('#undo').disabled=!history.length;}
 const ghost=new THREE.Mesh(new THREE.BoxGeometry(1.01,.96,1.01),new THREE.MeshBasicMaterial({color:'#fff5bf',transparent:true,opacity:.28,depthWrite:false}));ghost.visible=false;scene.add(ghost);
 const invisible=new THREE.MeshBasicMaterial({visible:false});
@@ -149,14 +173,15 @@ function roof(parent,x,y,z,color){
   const form=roofForms.get(key(x,y,z));if(!form)return;
   const top=y+1;
   const tier=architecture.get(key(x,y,z))?.tier||'cottage';
-  const estate=tier==='estate';
+  const estate=tier==='estate',framed=tier!=='cottage';
+  const frameColor=new THREE.Color(timber[blocks[key(x,y,z)].wood]).multiplyScalar(.72).getStyle();
   const rise=estate?1.35:1;
   if(form.kind==='terrace'){
     const deck=timberDeck(parent,x,top,z,blocks[key(x,y,z)].wood,true);
     deck.userData={position:[x,y,z],normal:[0,1,0]};targets.push(deck);
     return;
   }
-  const vertices=[];
+  const vertices=[],gableVertices=[];
   function triangle(a,b,c){
     const normal=new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(new THREE.Vector3(...b),new THREE.Vector3(...a)),new THREE.Vector3().subVectors(new THREE.Vector3(...c),new THREE.Vector3(...a)));
     if(normal.y<0)[b,c]=[c,b];vertices.push(...a,...b,...c);
@@ -173,35 +198,50 @@ function roof(parent,x,y,z,color){
       triangle(point(a,b),point(a+step,b),point(a+step,b+step));
       triangle(point(a,b),point(a+step,b+step),point(a,b+step));
     }
+    for(const end of form.gables||[]){
+      if(end.tile!==key(x,y,z))continue;
+      const [ax,az,bx,bz]=end.edge;
+      const at=t=>[ax+(bx-ax)*t,top+joinedRoofHeight(form,ax+(bx-ax)*t,az+(bz-az)*t)*rise,az+(bz-az)*t];
+      for(let i=0;i<4;i++){
+        const a=at(i/4),b=at((i+1)/4),c=[a[0],top,a[2]],d=[b[0],top,b[2]];
+        gableVertices.push(...c,...a,...b,...c,...b,...d);
+        timberBeam(parent,[a[0]+end.dx*.035,a[1],a[2]+end.dz*.035],[b[0]+end.dx*.035,b[1],b[2]+end.dz*.035],framed?.09:.06,frameColor);
+      }
+      const mid=at(.5),offset=p=>[p[0]+end.dx*.035,p[1],p[2]+end.dz*.035];
+      timberBeam(parent,offset([ax,top,az]),offset([bx,top,bz]),.09,frameColor);
+      timberBeam(parent,offset([mid[0],top,mid[2]]),offset(mid),.075,frameColor);
+      for(const t of [.2,.8]){const base=at(t),upper=at((t+.5)/2);timberBeam(parent,offset([base[0],top,base[2]]),offset(upper),.06,frameColor);}
+    }
   }else{
     const cross=form.axis==='x'?z:x,along=form.axis==='x'?x:z;
-    const outerLow=estate&&cross-.5===form.lo?.14:0,outerHigh=estate&&cross+.5===form.hi?.14:0;
+    const outerLow=framed&&cross-.5===form.lo?.14:0,outerHigh=framed&&cross+.5===form.hi?.14:0;
     const cuts=[cross-.5-outerLow,...(form.ridge>cross-.5&&form.ridge<cross+.5?[form.ridge]:[]),cross+.5+outerHigh];
     const height=c=>top+Math.max(0,1-Math.abs(c-form.ridge)/((form.hi-form.lo)/2))*form.height*rise;
     const point=(a,c,h=height(c))=>form.axis==='x'?[a,h,c]:[c,h,a];
     for(let i=0;i<cuts.length-1;i++){
-      const startOver=estate&&!blocks[key(x-(form.axis==='x'?1:0),y,z-(form.axis==='z'?1:0))]?.14:0;
-      const endOver=estate&&!blocks[key(x+(form.axis==='x'?1:0),y,z+(form.axis==='z'?1:0))]?.14:0;
+      const startOver=framed&&!blocks[key(x-(form.axis==='x'?1:0),y,z-(form.axis==='z'?1:0))]?.14:0;
+      const endOver=framed&&!blocks[key(x+(form.axis==='x'?1:0),y,z+(form.axis==='z'?1:0))]?.14:0;
       const c=cuts[i],d=cuts[i+1],a=point(along-.5-startOver,c),b=point(along+.5+endOver,c),e=point(along+.5+endOver,d),f=point(along-.5-startOver,d);
       triangle(a,b,e);triangle(a,e,f);
       for(const side of [-1,1]){
         const nx=x+(form.axis==='x'?side:0),nz=z+(form.axis==='z'?side:0);
         if(roofForms.get(key(nx,y,nz))===form)continue;
         const edge=along+side*.5;
-        if(estate){
-          const wood=timber[blocks[key(x,y,z)].wood],front=edge+side*.018;
-          timberBeam(parent,point(front,c),point(front,d),.065,wood);
-          timberBeam(parent,point(front,Math.max(c,cross-.5),top+.025),point(front,Math.min(d,cross+.5),top+.025),.07,wood);
-          for(let t=Math.max(c,cross-.5)+.06;t<Math.min(d,cross+.5);t+=.13)timberBeam(parent,point(front,t,top+.04),point(front,t,height(t)-.025),.025,wood);
-          if(form.ridge>=c&&form.ridge<=d)timberBeam(parent,point(front,form.ridge,top),point(front,form.ridge),.065,wood);
+        {
+          const wood=frameColor,front=edge+side*.045;
+          timberBeam(parent,point(front,c),point(front,d),estate?.105:framed?.085:.06,wood);
+          timberBeam(parent,point(front,Math.max(c,cross-.5),top+.025),point(front,Math.min(d,cross+.5),top+.025),estate?.11:.08,wood);
+          if(framed)for(let t=Math.max(c,cross-.5)+.06;t<Math.min(d,cross+.5);t+=.13)timberBeam(parent,point(front,t,top+.04),point(front,t,height(t)-.025),.025,wood);
+          if(form.ridge>=c&&form.ridge<=d)timberBeam(parent,point(front,form.ridge,top),point(front,form.ridge),estate?.095:.07,wood);
           const mid=(Math.max(c,cross-.5)+Math.min(d,cross+.5))/2;
-          timberBeam(parent,point(front,mid,top+.04),point(front,(mid+form.ridge)/2),.045,wood);
+          timberBeam(parent,point(front,mid,top+.04),point(front,(mid+form.ridge)/2),framed?.065:.045,wood);
         }
-        triangle(point(edge,c,top),point(edge,c),point(edge,d));triangle(point(edge,c,top),point(edge,d),point(edge,d,top));
+        gableVertices.push(...point(edge,c,top),...point(edge,c),...point(edge,d),...point(edge,c,top),...point(edge,d),...point(edge,d,top));
       }
     }
   }
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();
+  if(gableVertices.length){const infill=new THREE.BufferGeometry();infill.setAttribute('position',new THREE.Float32BufferAttribute(gableVertices,3));infill.computeVertexNormals();const wood=material(timber[blocks[key(x,y,z)].wood]);wood.side=THREE.DoubleSide;const gable=new THREE.Mesh(infill,wood);gable.name='timber-gable';gable.castShadow=true;gable.receiveShadow=true;parent.add(gable);}
   const roofMaterial=roofingMaterial(color,tier);
   roofDetails(parent,vertices,tier,color);
   const m=new THREE.Mesh(geometry,roofMaterial);m.castShadow=true;m.receiveShadow=true;m.userData={position:[x,y,z],normal:[0,1,0]};parent.add(m);targets.push(m);
@@ -218,9 +258,9 @@ function roof(parent,x,y,z,color){
     box(parent,.22,.07,.24,x+.24,top+.75,z+.16,'#d9d0b5');
   }
   for(const [dx,,dz]of directions)if(!blocks[key(x+dx,y,z+dz)]){
-    const deep=estate&&form.kind!=='joined';
+    const deep=framed&&form.kind!=='joined';
     box(parent,dx?(deep?.22:.055):1,.065,dz?(deep?.22:.055):1,x+dx*(deep?.55:.5),top-.025,z+dz*(deep?.55:.5),timber[blocks[key(x,y,z)].wood]);
-    if(deep)for(const offset of [-.32,.32])timberBeam(parent,[x+dx*.49+dz*offset,top-.23,z+dz*.49+dx*offset],[x+dx*.61+dz*offset,top-.04,z+dz*.61+dx*offset],.045,'#826341');
+    if(deep)for(const offset of [-.32,.32])timberBeam(parent,[x+dx*.49+dz*offset,top-.23,z+dz*.49+dx*offset],[x+dx*.61+dz*offset,top-.04,z+dz*.61+dx*offset],.065,frameColor);
   }
 }
 function railing(parent,x,y,z,dx,dz,color){
@@ -453,7 +493,7 @@ function campGathering(parent,x,z,size,manual=false){
 
 let campFlames=[];
 function campProp(parent,x,z,kind){
- const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
+ const g=new THREE.Group();g.name=`camp-${kind}`;g.position.set(x,0,z);parent.add(g);
  const nearby=Object.entries(blocks).filter(([k,b])=>['camp','campProp'].includes(b.type)&&Math.abs(Number(k.split(',')[0])-x)+Math.abs(Number(k.split(',')[2])-z)<=3).length;
  if(kind==='fire'){
   campGathering(g,0,0,0,true);
@@ -473,6 +513,7 @@ function campProp(parent,x,z,kind){
   for(const zz of [-.34,.34]){box(g,.72,.06,.14,0,.23,zz,'#ad8c60');for(const xx of [-.24,.24])box(g,.055,.2,.1,xx,.1,zz,'#715d43');}
   if(nearby>=3)box(g,.065,.07,.065,.2,.49,0,'#e3d3b5');
  }else{
+  g.rotation.y=campFacing(blocks,x,z)-Math.PI/2;
   box(g,.045,.8,.045,0,.4,0,'#715d43');box(g,.2,.04,.04,.08,.8,0,'#715d43');
   const glow=new THREE.Mesh(new THREE.BoxGeometry(.12,.18,.12),new THREE.MeshStandardMaterial({color:'#ffcf78',emissive:'#ffb84d',emissiveIntensity:.7}));glow.position.set(.16,.65,0);g.add(glow);
   box(g,.16,.035,.16,.16,.76,0,'#5e614e');box(g,.16,.035,.16,.16,.55,0,'#5e614e');
@@ -546,9 +587,48 @@ function pathTile(parent,x,z){
   }
 }
 
+let terrainAction='raise';
+function terrainMode(){return tool==='terrain'?terrainAction:null;}
+function rebuildTerrain(){
+ clear(clearing);
+ for(let x=-LIMIT-1;x<=LIMIT+1;x++)for(let z=-LIMIT-1;z<=LIMIT+1;z++){
+  const geo=new THREE.PlaneGeometry(1,1,8,8);geo.rotateX(-Math.PI/2);const pos=geo.attributes.position,colors=[];
+  for(let i=0;i<pos.count;i++){
+   const a=x+pos.getX(i),c=z+pos.getZ(i),h=terrainHeight(terrain,a,c);pos.setY(i,h-.015);
+   const slope=Math.hypot(terrainHeight(terrain,a+.05,c)-terrainHeight(terrain,a-.05,c),terrainHeight(terrain,a,c+.05)-terrainHeight(terrain,a,c-.05))/.1;
+   const color=new THREE.Color(slope>.85?'#a6a18a':(x+z)%2?'#b5c89b':'#b9cb9e');colors.push(color.r,color.g,color.b);
+  }
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.computeVertexNormals();
+  const mesh=new THREE.Mesh(geo,terrainMaterial);mesh.position.set(x,0,z);mesh.receiveShadow=true;mesh.userData.terrain=true;clearing.add(mesh);
+ }
+}
+const terrainMaterial=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1});
+function drapePath(root){
+ root.updateMatrixWorld(true);
+ root.traverse(mesh=>{
+  if(!mesh.isMesh)return;
+  // Subdivide larger triangles so paths follow rounded terrain shoulders.
+  const original=mesh.geometry,base=original.index?original.toNonIndexed():original;
+  const names=Object.keys(base.attributes),out=Object.fromEntries(names.map(n=>[n,[]]));
+  const vertex=i=>Object.fromEntries(names.map(n=>[n,Array.from({length:base.attributes[n].itemSize},(_,j)=>base.attributes[n].array[i*base.attributes[n].itemSize+j])]));
+  const mid=(a,b)=>Object.fromEntries(names.map(n=>[n,a[n].map((v,j)=>(v+b[n][j])/2)]));
+  function triangle(a,b,c,depth){
+   const edge=(p,q)=>Math.hypot(...p.position.map((v,i)=>v-q.position[i]));
+   if(depth<3&&Math.max(edge(a,b),edge(b,c),edge(c,a))>.22){const ab=mid(a,b),bc=mid(b,c),ca=mid(c,a);triangle(a,ab,ca,depth+1);triangle(ab,b,bc,depth+1);triangle(ca,bc,c,depth+1);triangle(ab,bc,ca,depth+1);return;}
+   for(const v of [a,b,c])for(const n of names)out[n].push(...v[n]);
+  }
+  for(let i=0;i<base.attributes.position.count;i+=3)triangle(vertex(i),vertex(i+1),vertex(i+2),0);
+  const geometry=new THREE.BufferGeometry();for(const n of names)geometry.setAttribute(n,new THREE.Float32BufferAttribute(out[n],base.attributes[n].itemSize));
+  const pos=geometry.attributes.position,inverse=mesh.matrixWorld.clone().invert();
+  for(let i=0;i<pos.count;i++){const p=new THREE.Vector3().fromBufferAttribute(pos,i).applyMatrix4(mesh.matrixWorld);p.y+=terrainHeight(terrain,p.x,p.z);p.applyMatrix4(inverse);pos.setXYZ(i,p.x,p.y,p.z);}
+  geometry.computeVertexNormals();mesh.geometry=geometry;if(base!==original)base.dispose();original.dispose();
+ });
+}
+
 function rebuild(){
   renderer.shadowMap.needsUpdate=true;
   clear(buildings);targets=[];campFlames=[];
+  rebuildTerrain();
   waterAnalysis=waterView.rebuild(water,blocks);
   roofForms=roofPlan(blocks);
   architecture=architecturePlan(blocks);
@@ -560,7 +640,7 @@ function rebuild(){
   const buildingFronts=new Map();
   for(const [id,entry]of entrances)buildingFronts.set(architecture.get(id),entry);
   for(const [k,b]of Object.entries(blocks)){
-    const [x,y,z]=k.split(',').map(Number);
+    const [x,y,z]=k.split(',').map(Number),childStart=buildings.children.length;
     if(b.type==='tree'){tree(buildings,x,z,1,b.species||'pine');}
     if(b.type==='camp'){
       const group=camps.get(k);
@@ -611,6 +691,15 @@ function rebuild(){
             if(y===0)for(let h=.23;h<.9;h+=.3)box(face,.095,.07,.05,side*.46,h,.02,'#d0c5aa');
           }
         }else for(let h=.17;h<1;h+=.19)box(face,1,.017,.016,0,h,0,'#987951');
+        if(lodge||estate){
+          const beamColor=new THREE.Color(timber[b.wood]).multiplyScalar(.72).getStyle();
+          box(face,1,.09,.11,0,.94,.045,beamColor).name='timber-header';
+          for(const side of [-1,1]){
+            if(contiguous(side)&&(side===1||left%2!==0))continue;
+            box(face,.09,.92,.105,side*.45,.49,.045,beamColor).name='timber-post';
+            timberBeam(face,[side*.45,.68,.05],[side*.22,.92,.05],.065,beamColor);
+          }
+        }
         const terraceDoor=y>0&&(blocks[key(x+dx,y,z+dz)]?.type==='balcony'||roofForms.get(key(x+dx,y-1,z+dz))?.kind==='terrace');
         if((y===0&&entrances.get(k)?.dx===dx&&entrances.get(k)?.dz===dz)||terraceDoor){
           box(face,estate?.34:.24,.61,.045,0,.305,.09,'#6c5942');
@@ -662,18 +751,21 @@ function rebuild(){
     }
     const proxy=new THREE.Mesh(new THREE.BoxGeometry(1,['house','camp','campProp'].includes(b.type)?1:b.type==='tree'?(treeHeights[b.species]||2.5):b.type==='path'&&water[waterKey(x,z)]?.45:.15,1),invisible);
     proxy.position.set(x,y+(['house','camp','campProp'].includes(b.type)?.5:b.type==='tree'?(treeHeights[b.species]||2.5)/2:b.type==='path'&&water[waterKey(x,z)]?.225:.075),z);proxy.userData={position:[x,y,z]};buildings.add(proxy);targets.push(proxy);
+    const elevation=terrainHeight(terrain,x,z);
+    for(const child of buildings.children.slice(childStart)){if(b.type==='path'&&!levelSite(terrain,x,z))drapePath(child);else child.position.y+=elevation;}
   }
-  villagers.rebuild(blocks,water,peak>=3);
+  villagers.rebuild(blocks,water,peak>=3,terrain);
 }
-function commit(next,nextWater=water){
-  history.push(JSON.stringify({blocks,water}));if(history.length>80)history.shift();
-  const before=peak;blocks=next;water=nextWater;updateUI();rebuild();save();
+function commit(next,nextWater=water,nextTerrain=terrain){
+  history.push(JSON.stringify({blocks,water,terrain}));if(history.length>80)history.shift();
+  const before=peak;blocks=next;water=nextWater;terrain=nextTerrain;updateUI();rebuild();save();
   for(const m of milestones)if(before<m.n&&peak>=m.n)notify(`✧ ${m.text}`);
 }
-function undo(){if(!history.length)return;const previous=JSON.parse(history.pop());blocks=previous.blocks;water=previous.water;updateUI();rebuild();save();ghost.visible=false;}
+function undo(){if(!history.length)return;const previous=JSON.parse(history.pop());blocks=previous.blocks;water=previous.water;terrain=previous.terrain||{};updateUI();rebuild();save();ghost.visible=false;}
 function destination(hit){
   if(!hit)return null;
   const [x,y,z]=hit.position;
+  if(terrainMode())return [x,0,z];
   if(tool==='role')return null;
   if(tool==='camp')return hit.ground?[x,0,z]:blocks[key(x,y,z)]?.type==='camp'?[x,y,z]:null;
   if(tool==='water')return[x,0,z];
@@ -686,7 +778,14 @@ function destination(hit){
 function edit(hit,remove=false,paint=false){
   if(!hit)return;
   const [x,,z]=hit.position;
+  if(terrainMode()&&!remove){
+    const mode=terrainMode();
+    if(mode==='level'&&levelTarget===null){levelTarget=terrainLevel(terrain,x,z);$('#terrain-level').textContent=`Level target: ${(levelTarget*TERRAIN_STEP).toFixed(2)} · tap land to apply`;notify('Height sampled. Tap other tiles to level them.');return;}
+    const next=editTerrain(terrain,blocks,water,x,z,mode,levelTarget);
+    if(next)commit(blocks,water,next);else notify('Keep clear of structures and water. Height range: 0–6 steps.');return;
+  }
   if(tool==='water'){
+    if(!remove&&(!levelSite(terrain,x,z)||terrainHeight(terrain,x,z)!==0)){notify('Water needs flat land at its original height.');return;}
     const next=waterEdit(water,blocks,x,z,remove?null:$('#water-kind').value,LIMIT);
     if(next)commit(blocks,next);
     else if(!remove&&['tree','camp','campProp'].includes(blocks[key(x,0,z)]?.type))notify('Remove this tree or campsite first to make room for water.');
@@ -704,12 +803,14 @@ function edit(hit,remove=false,paint=false){
   if(paint&&!hit.ground){const k=key(...hit.position);if(['house','balcony'].includes(blocks[k]?.type)){const next=structuredClone(blocks);next[k]={...next[k],wood:$('#wood').value,roof:$('#roof').value};commit(next);}return;}
   const p=destination(hit);
   if(!p||!canPlace(blocks,...p,tool==='camp'&&$('#camp-piece').value!=='shelter'?'campProp':tool,water)){notify(tool==='tree'?'Trees need open, dry ground.':'Choose open ground, a roof, or an exposed wall. Build up to 8 floors.');return;}
+  if(['house','balcony','camp'].includes(tool)&&!levelSite(terrain,p[0],p[2])){notify('Level a clearing around this tile before placing a structure.');return;}
   const next=structuredClone(blocks);next[key(...p)]={type:tool,wood:$('#wood').value,roof:$('#roof').value};if(tool==='balcony')next[key(...p)].cover=$('#deck-cover').value;if(tool==='path')next[key(...p)].surface=$('#path-surface').value;if(tool==='tree')next[key(...p)].species=$('#tree-species').value;if(tool==='camp'){if($('#camp-piece').value==='shelter')next[key(...p)].stage=1;else next[key(...p)]={type:'campProp',kind:$('#camp-piece').value};}if(tool==='house'&&!hit.ground&&blocks[key(...hit.position)]?.role)next[key(...p)].role=blocks[key(...hit.position)].role;commit(next);
 }
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
-function pick(e){const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...targets,ground],false);for(const hit of hits){if(hit.object===ground){const x=Math.round(hit.point.x),z=Math.round(hit.point.z);return Math.abs(x)<=LIMIT&&Math.abs(z)<=LIMIT?{position:[x,0,z],normal:[0,1,0],ground:true}:null;}return {position:hit.object.userData.position,normal:hit.object.userData.normal||hit.face.normal.toArray().map(Math.round),ground:false};}return null;}
+function pick(e){const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...targets,...clearing.children,ground],false);for(const hit of hits){if(hit.object===ground||hit.object.userData.terrain){const x=Math.round(hit.point.x),z=Math.round(hit.point.z);return Math.abs(x)<=LIMIT&&Math.abs(z)<=LIMIT?{position:[x,0,z],normal:[0,1,0],ground:true}:null;}return {position:hit.object.userData.position,normal:hit.object.userData.normal||hit.face.normal.toArray().map(Math.round),ground:false};}return null;}
 function preview(hit){
   const p=destination(hit);
+  if(p&&terrainMode()){const mode=terrainMode();ghost.visible=mode==='level'&&levelTarget===null||!!editTerrain(terrain,blocks,water,p[0],p[2],mode,levelTarget);ghost.position.set(p[0],terrainHeight(terrain,p[0],p[2])+.06,p[2]);ghost.scale.set(1,.08,1);ghost.material.color.set(mode==='lower'?'#d8b790':'#fff5bf');return;}
   const wet=hit&&water[waterKey(hit.position[0],hit.position[2])];
   ghost.visible=!!p&&(tool==='water'?!!waterEdit(water,blocks,p[0],p[2],$('#water-kind').value,LIMIT):tool==='erase'?(!hit.ground||!!wet):tool==='camp'&&blocks[key(...p)]?.type==='camp'?$('#camp-piece').value==='shelter'&&!!upgradeCamp(blocks,key(...p)):canPlace(blocks,...p,tool,water));
   if(tool==='water'&&hit){
@@ -717,7 +818,7 @@ function preview(hit){
     $('#water-status').textContent=body?`${body.size} connected tiles · ${['Gentle ripples','Pebbles along the banks','Boulders join the shoreline','Reeds and water lilies'][body.tier]}`:'Click the grid to grow a waterway.';
   }
   if(!ghost.visible)return;
-  ghost.position.set(p[0],tool==='water'?.08:p[1]+.5,p[2]);
+  ghost.position.set(p[0],tool==='water'?.08:p[1]+.5+terrainHeight(terrain,p[0],p[2]),p[2]);
   ghost.material.color.set(tool==='water'?'#77c9ce':tool==='erase'?'#d78469':'#fff5bf');
   ghost.scale.set(1,tool==='water'?.065:tool==='balcony'?.16:1,1);
 }
@@ -776,11 +877,17 @@ canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('pointerleave',()=>ghost.visible=false);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=value!=='house';$('#role-options').hidden=value!=='role';$('#tree-options').hidden=value!=='tree';$('#path-options').hidden=value!=='path';$('#deck-options').hidden=value!=='balcony';$('#camp-options').hidden=value!=='camp';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
+function selectTool(value){tool=value;$('#water-options').hidden=value!=='water';$('#building-materials').hidden=value!=='house';$('#role-options').hidden=value!=='role';$('#tree-options').hidden=value!=='tree';$('#path-options').hidden=value!=='path';$('#deck-options').hidden=value!=='balcony';$('#camp-options').hidden=value!=='camp';$('#terrain-options').hidden=value!=='terrain';document.querySelectorAll('[data-tool]').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.setAttribute('aria-pressed',String(b.dataset.tool===tool));});ghost.visible=false;}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>selectTool(b.dataset.tool));
 $('#undo').onclick=undo;
 const dock=$('.dock'), dockMenu=$('#build-menu'), dockToggle=$('#dock-toggle');
+function setHelp(open){
+  $('#help-panel').hidden=!open;
+  $('#help-toggle').setAttribute('aria-expanded',String(open));
+  if(open)setTasks(false);
+}
 function setTasks(open){
+  if(open)setHelp(false);
   $('#tasks-panel').hidden=!open;
   $('#tasks-toggle').setAttribute('aria-expanded',String(open));
 }
@@ -793,7 +900,7 @@ function setDock(open){
   dockToggle.setAttribute('aria-label',open?'Close building menu':'Open building menu');
   dockToggle.title=(open?'Close':'Open')+' building menu (B)';
   $('#dock-caption').innerHTML=open?'A little room to create':'Build your town <kbd>B</kbd>';
-  if(!open)setTasks(false);
+  if(!open){setTasks(false);setHelp(false);}
   // Restart the short logo bounce and water ripple on each toggle.
   dockToggle.classList.remove('animating');
   void dockToggle.offsetWidth;
@@ -801,6 +908,14 @@ function setDock(open){
 }
 dockToggle.addEventListener('animationend',()=>dockToggle.classList.remove('animating'));
 dockToggle.onclick=()=>setDock(dock.dataset.open!=='true');
+document.querySelectorAll('[data-terrain]').forEach(button=>button.onclick=()=>{
+ terrainAction=button.dataset.terrain;levelTarget=null;ghost.visible=false;
+ document.querySelectorAll('[data-terrain]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+ $('#terrain-level').textContent=terrainAction==='level'?'Tap land to sample its height, then tap to level.':'Tap land once per height step.';
+ $('#sample-height').hidden=terrainAction!=='level';
+});
+$('#sample-height').onclick=()=>{levelTarget=null;$('#terrain-level').textContent='Tap land to sample a new height.';};
+$('#help-toggle').onclick=()=>setHelp($('#help-panel').hidden);
 $('#tasks-toggle').onclick=()=>setTasks($('#tasks-panel').hidden);
 addEventListener('keydown',e=>{
   if(e.key==='Escape' && dock.dataset.open==='true'){e.preventDefault();setDock(false);return;}
@@ -810,7 +925,7 @@ addEventListener('keydown',e=>{
 });
 function orbit(delta){const offset=camera.position.clone().sub(controls.target);offset.applyAxisAngle(new THREE.Vector3(0,1,0),delta);camera.position.copy(controls.target).add(offset);controls.update();}
 controls.addEventListener('change',()=>{ghost.visible=false;});
-addEventListener('keydown',e=>{if(['SELECT','INPUT'].includes(document.activeElement.tagName))return;if(['1','2','3','4','5','6','7','8'].includes(e.key))selectTool(['house','balcony','path','water','tree','camp','role','erase'][Number(e.key)-1]);if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}if(e.key.toLowerCase()==='q')orbit(Math.PI/8);if(e.key.toLowerCase()==='e')orbit(-Math.PI/8);});
+addEventListener('keydown',e=>{if(['SELECT','INPUT'].includes(document.activeElement.tagName))return;if(['1','2','3','4','5','6','7','8','9'].includes(e.key))selectTool(['house','balcony','path','water','terrain','tree','camp','role','erase'][Number(e.key)-1]);if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}if(e.key.toLowerCase()==='q')orbit(Math.PI/8);if(e.key.toLowerCase()==='e')orbit(-Math.PI/8);});
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);resize();
 updateUI();rebuild();save();
 renderer.setAnimationLoop(t=>{

@@ -34,3 +34,11 @@ test('navigation follows elevation and excludes steep cycling routes',()=>{
  assert.equal(walk.get('1,0').y,.6);assert.equal(findRoute(walk,'0,0','1,0').length,2);assert.equal(findRoute(bike,'0,0','1,0').length,0);
  assert.equal(findRoute(buildNavigation(blocks,{},true,{'1,0':1}),'0,0','1,0').length,2);
 });
+
+test('decorative border stays outside the editable clearing and fades back to ground',async()=>{
+ const {borderHeight}=await import('../terrain.js');
+ for(let x=-10;x<=10;x++)for(let z=-10;z<=10;z++)assert.equal(borderHeight(x,z),0);
+ assert(borderHeight(15,-18)>3);
+ assert.equal(borderHeight(27,0),0);
+ for(let x=-27;x<=27;x++)for(let z=-27;z<=27;z++)assert(Number.isFinite(borderHeight(x,z))&&borderHeight(x,z)>=0);
+});

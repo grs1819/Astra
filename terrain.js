@@ -37,3 +37,13 @@ export function editTerrain(terrain,blocks,water,x,z,mode,level=0){
  if(next===old)return null;
  const result={...terrain};if(next)result[id(x,z)]=next;else delete result[id(x,z)];return result;
 }
+
+// Decorative landscape stays outside the playable clearing and never enters saves.
+export function borderHeight(x,z){
+ const radius=Math.max(Math.abs(x),Math.abs(z));
+ if(radius<=10.5||radius>=27)return 0;
+ const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+ const edge=smooth((radius-10.5)/3)*smooth((27-radius)/5);
+ const hill=(a,b,size,height)=>height*Math.exp(-((x-a)**2+(z-b)**2)/(size*size));
+ return edge*(.22+.28*(Math.sin(x*.37+z*.2)+1)+hill(-16,-15,4.2,3.8)+hill(15,-18,4.6,4.7)+hill(-19,4,3.7,2.9)+hill(18,12,4,1.8)+hill(-5,17,4.8,1));
+}

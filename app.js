@@ -173,14 +173,15 @@ function roof(parent,x,y,z,color){
   const form=roofForms.get(key(x,y,z));if(!form)return;
   const top=y+1;
   const tier=architecture.get(key(x,y,z))?.tier||'cottage';
-  const estate=tier==='estate';
+  const estate=tier==='estate',framed=tier!=='cottage';
+  const frameColor=new THREE.Color(timber[blocks[key(x,y,z)].wood]).multiplyScalar(.72).getStyle();
   const rise=estate?1.35:1;
   if(form.kind==='terrace'){
     const deck=timberDeck(parent,x,top,z,blocks[key(x,y,z)].wood,true);
     deck.userData={position:[x,y,z],normal:[0,1,0]};targets.push(deck);
     return;
   }
-  const vertices=[];
+  const vertices=[],gableVertices=[];
   function triangle(a,b,c){
     const normal=new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(new THREE.Vector3(...b),new THREE.Vector3(...a)),new THREE.Vector3().subVectors(new THREE.Vector3(...c),new THREE.Vector3(...a)));
     if(normal.y<0)[b,c]=[c,b];vertices.push(...a,...b,...c);
@@ -197,35 +198,50 @@ function roof(parent,x,y,z,color){
       triangle(point(a,b),point(a+step,b),point(a+step,b+step));
       triangle(point(a,b),point(a+step,b+step),point(a,b+step));
     }
+    for(const end of form.gables||[]){
+      if(end.tile!==key(x,y,z))continue;
+      const [ax,az,bx,bz]=end.edge;
+      const at=t=>[ax+(bx-ax)*t,top+joinedRoofHeight(form,ax+(bx-ax)*t,az+(bz-az)*t)*rise,az+(bz-az)*t];
+      for(let i=0;i<4;i++){
+        const a=at(i/4),b=at((i+1)/4),c=[a[0],top,a[2]],d=[b[0],top,b[2]];
+        gableVertices.push(...c,...a,...b,...c,...b,...d);
+        timberBeam(parent,[a[0]+end.dx*.035,a[1],a[2]+end.dz*.035],[b[0]+end.dx*.035,b[1],b[2]+end.dz*.035],framed?.09:.06,frameColor);
+      }
+      const mid=at(.5),offset=p=>[p[0]+end.dx*.035,p[1],p[2]+end.dz*.035];
+      timberBeam(parent,offset([ax,top,az]),offset([bx,top,bz]),.09,frameColor);
+      timberBeam(parent,offset([mid[0],top,mid[2]]),offset(mid),.075,frameColor);
+      for(const t of [.2,.8]){const base=at(t),upper=at((t+.5)/2);timberBeam(parent,offset([base[0],top,base[2]]),offset(upper),.06,frameColor);}
+    }
   }else{
     const cross=form.axis==='x'?z:x,along=form.axis==='x'?x:z;
-    const outerLow=estate&&cross-.5===form.lo?.14:0,outerHigh=estate&&cross+.5===form.hi?.14:0;
+    const outerLow=framed&&cross-.5===form.lo?.14:0,outerHigh=framed&&cross+.5===form.hi?.14:0;
     const cuts=[cross-.5-outerLow,...(form.ridge>cross-.5&&form.ridge<cross+.5?[form.ridge]:[]),cross+.5+outerHigh];
     const height=c=>top+Math.max(0,1-Math.abs(c-form.ridge)/((form.hi-form.lo)/2))*form.height*rise;
     const point=(a,c,h=height(c))=>form.axis==='x'?[a,h,c]:[c,h,a];
     for(let i=0;i<cuts.length-1;i++){
-      const startOver=estate&&!blocks[key(x-(form.axis==='x'?1:0),y,z-(form.axis==='z'?1:0))]?.14:0;
-      const endOver=estate&&!blocks[key(x+(form.axis==='x'?1:0),y,z+(form.axis==='z'?1:0))]?.14:0;
+      const startOver=framed&&!blocks[key(x-(form.axis==='x'?1:0),y,z-(form.axis==='z'?1:0))]?.14:0;
+      const endOver=framed&&!blocks[key(x+(form.axis==='x'?1:0),y,z+(form.axis==='z'?1:0))]?.14:0;
       const c=cuts[i],d=cuts[i+1],a=point(along-.5-startOver,c),b=point(along+.5+endOver,c),e=point(along+.5+endOver,d),f=point(along-.5-startOver,d);
       triangle(a,b,e);triangle(a,e,f);
       for(const side of [-1,1]){
         const nx=x+(form.axis==='x'?side:0),nz=z+(form.axis==='z'?side:0);
         if(roofForms.get(key(nx,y,nz))===form)continue;
         const edge=along+side*.5;
-        if(estate){
-          const wood=timber[blocks[key(x,y,z)].wood],front=edge+side*.018;
-          timberBeam(parent,point(front,c),point(front,d),.065,wood);
-          timberBeam(parent,point(front,Math.max(c,cross-.5),top+.025),point(front,Math.min(d,cross+.5),top+.025),.07,wood);
-          for(let t=Math.max(c,cross-.5)+.06;t<Math.min(d,cross+.5);t+=.13)timberBeam(parent,point(front,t,top+.04),point(front,t,height(t)-.025),.025,wood);
-          if(form.ridge>=c&&form.ridge<=d)timberBeam(parent,point(front,form.ridge,top),point(front,form.ridge),.065,wood);
+        {
+          const wood=frameColor,front=edge+side*.045;
+          timberBeam(parent,point(front,c),point(front,d),estate?.105:framed?.085:.06,wood);
+          timberBeam(parent,point(front,Math.max(c,cross-.5),top+.025),point(front,Math.min(d,cross+.5),top+.025),estate?.11:.08,wood);
+          if(framed)for(let t=Math.max(c,cross-.5)+.06;t<Math.min(d,cross+.5);t+=.13)timberBeam(parent,point(front,t,top+.04),point(front,t,height(t)-.025),.025,wood);
+          if(form.ridge>=c&&form.ridge<=d)timberBeam(parent,point(front,form.ridge,top),point(front,form.ridge),estate?.095:.07,wood);
           const mid=(Math.max(c,cross-.5)+Math.min(d,cross+.5))/2;
-          timberBeam(parent,point(front,mid,top+.04),point(front,(mid+form.ridge)/2),.045,wood);
+          timberBeam(parent,point(front,mid,top+.04),point(front,(mid+form.ridge)/2),framed?.065:.045,wood);
         }
-        triangle(point(edge,c,top),point(edge,c),point(edge,d));triangle(point(edge,c,top),point(edge,d),point(edge,d,top));
+        gableVertices.push(...point(edge,c,top),...point(edge,c),...point(edge,d),...point(edge,c,top),...point(edge,d),...point(edge,d,top));
       }
     }
   }
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();
+  if(gableVertices.length){const infill=new THREE.BufferGeometry();infill.setAttribute('position',new THREE.Float32BufferAttribute(gableVertices,3));infill.computeVertexNormals();const wood=material(timber[blocks[key(x,y,z)].wood]);wood.side=THREE.DoubleSide;const gable=new THREE.Mesh(infill,wood);gable.name='timber-gable';gable.castShadow=true;gable.receiveShadow=true;parent.add(gable);}
   const roofMaterial=roofingMaterial(color,tier);
   roofDetails(parent,vertices,tier,color);
   const m=new THREE.Mesh(geometry,roofMaterial);m.castShadow=true;m.receiveShadow=true;m.userData={position:[x,y,z],normal:[0,1,0]};parent.add(m);targets.push(m);
@@ -242,9 +258,9 @@ function roof(parent,x,y,z,color){
     box(parent,.22,.07,.24,x+.24,top+.75,z+.16,'#d9d0b5');
   }
   for(const [dx,,dz]of directions)if(!blocks[key(x+dx,y,z+dz)]){
-    const deep=estate&&form.kind!=='joined';
+    const deep=framed&&form.kind!=='joined';
     box(parent,dx?(deep?.22:.055):1,.065,dz?(deep?.22:.055):1,x+dx*(deep?.55:.5),top-.025,z+dz*(deep?.55:.5),timber[blocks[key(x,y,z)].wood]);
-    if(deep)for(const offset of [-.32,.32])timberBeam(parent,[x+dx*.49+dz*offset,top-.23,z+dz*.49+dx*offset],[x+dx*.61+dz*offset,top-.04,z+dz*.61+dx*offset],.045,'#826341');
+    if(deep)for(const offset of [-.32,.32])timberBeam(parent,[x+dx*.49+dz*offset,top-.23,z+dz*.49+dx*offset],[x+dx*.61+dz*offset,top-.04,z+dz*.61+dx*offset],.065,frameColor);
   }
 }
 function railing(parent,x,y,z,dx,dz,color){
@@ -477,7 +493,7 @@ function campGathering(parent,x,z,size,manual=false){
 
 let campFlames=[];
 function campProp(parent,x,z,kind){
- const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
+ const g=new THREE.Group();g.name=`camp-${kind}`;g.position.set(x,0,z);parent.add(g);
  const nearby=Object.entries(blocks).filter(([k,b])=>['camp','campProp'].includes(b.type)&&Math.abs(Number(k.split(',')[0])-x)+Math.abs(Number(k.split(',')[2])-z)<=3).length;
  if(kind==='fire'){
   campGathering(g,0,0,0,true);
@@ -497,6 +513,7 @@ function campProp(parent,x,z,kind){
   for(const zz of [-.34,.34]){box(g,.72,.06,.14,0,.23,zz,'#ad8c60');for(const xx of [-.24,.24])box(g,.055,.2,.1,xx,.1,zz,'#715d43');}
   if(nearby>=3)box(g,.065,.07,.065,.2,.49,0,'#e3d3b5');
  }else{
+  g.rotation.y=campFacing(blocks,x,z)-Math.PI/2;
   box(g,.045,.8,.045,0,.4,0,'#715d43');box(g,.2,.04,.04,.08,.8,0,'#715d43');
   const glow=new THREE.Mesh(new THREE.BoxGeometry(.12,.18,.12),new THREE.MeshStandardMaterial({color:'#ffcf78',emissive:'#ffb84d',emissiveIntensity:.7}));glow.position.set(.16,.65,0);g.add(glow);
   box(g,.16,.035,.16,.16,.76,0,'#5e614e');box(g,.16,.035,.16,.16,.55,0,'#5e614e');
@@ -674,6 +691,15 @@ function rebuild(){
             if(y===0)for(let h=.23;h<.9;h+=.3)box(face,.095,.07,.05,side*.46,h,.02,'#d0c5aa');
           }
         }else for(let h=.17;h<1;h+=.19)box(face,1,.017,.016,0,h,0,'#987951');
+        if(lodge||estate){
+          const beamColor=new THREE.Color(timber[b.wood]).multiplyScalar(.72).getStyle();
+          box(face,1,.09,.11,0,.94,.045,beamColor).name='timber-header';
+          for(const side of [-1,1]){
+            if(contiguous(side)&&(side===1||left%2!==0))continue;
+            box(face,.09,.92,.105,side*.45,.49,.045,beamColor).name='timber-post';
+            timberBeam(face,[side*.45,.68,.05],[side*.22,.92,.05],.065,beamColor);
+          }
+        }
         const terraceDoor=y>0&&(blocks[key(x+dx,y,z+dz)]?.type==='balcony'||roofForms.get(key(x+dx,y-1,z+dz))?.kind==='terrace');
         if((y===0&&entrances.get(k)?.dx===dx&&entrances.get(k)?.dz===dz)||terraceDoor){
           box(face,estate?.34:.24,.61,.045,0,.305,.09,'#6c5942');

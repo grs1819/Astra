@@ -83,12 +83,19 @@ export function roofPlan(blocks){
     const coords=queue.map(k=>k.split(',').map(Number));
     const xs=coords.map(p=>p[0]),zs=coords.map(p=>p[2]);
     const spanX=Math.max(...xs)-Math.min(...xs),spanZ=Math.max(...zs)-Math.min(...zs);
-    const axis=spanX>=spanZ?'x':'z',cross=axis==='x'?zs:xs;
+    const axis=spanX===spanZ?'z':spanX>spanZ?'x':'z',cross=axis==='x'?zs:xs;
     const lo=Math.min(...cross)-.5,hi=Math.max(...cross)+.5;
     const rectangular=queue.length===(spanX+1)*(spanZ+1);
-    const edges=[];
-    if(!rectangular)for(const [x,y,z]of coords)for(const [dx,,dz]of directions)if(!queue.includes(key(x+dx,y,z+dz)))edges.push(dx?[x+dx*.5,z-.5,x+dx*.5,z+.5]:[x-.5,z+dz*.5,x+.5,z+dz*.5]);
-    const form={edges,anchor:queue.slice().sort()[0],kind:queue.length===1?'hip':rectangular?'gable':'joined',axis,lo,hi,ridge:(lo+hi)/2,height:Math.min(.8,.44*(hi-lo))};
+    const edges=[],gables=[];
+    if(!rectangular)for(const [x,y,z]of coords){
+      const neighbors=directions.filter(([dx,,dz])=>queue.includes(key(x+dx,y,z+dz)));
+      for(const [dx,,dz]of directions)if(!queue.includes(key(x+dx,y,z+dz))){
+        const edge=dx?[x+dx*.5,z-.5,x+dx*.5,z+.5]:[x-.5,z+dz*.5,x+.5,z+dz*.5];
+        // A narrow wing ends in an exposed gable; side eaves still define its pitch.
+        if(neighbors.length===1&&neighbors[0][0]===-dx&&neighbors[0][2]===-dz)gables.push({tile:key(x,y,z),edge,dx,dz});else edges.push(edge);
+      }
+    }
+    const form={edges,gables,anchor:queue.slice().sort()[0],kind:rectangular?'gable':'joined',axis,lo,hi,ridge:(lo+hi)/2,height:Math.min(.8,.44*(hi-lo))};
     for(const k of queue)plan.set(k,form);
   }
   return plan;
@@ -247,6 +254,17 @@ export function porchFinishPlan(blocks){
 }
 
 export function campFacing(blocks,x,z,preferFire=false){
- const candidates=Object.entries(blocks).filter(([k,b])=>k.split(',')[1]==='0'&&(preferFire?b.type==='campProp'&&b.kind==='fire':b.type==='path')).map(([k])=>k.split(',').map(Number)).filter(([a,,c])=>Math.abs(a-x)+Math.abs(c-z)<=4).sort((a,b)=>((a[0]-x)**2+(a[2]-z)**2)-((b[0]-x)**2+(b[2]-z)**2)||a[0]-b[0]||a[2]-b[2]);
- return candidates.length?Math.atan2(candidates[0][0]-x,candidates[0][2]-z):0;
+ const candidates=[];
+ for(const [k,b]of Object.entries(blocks)){
+  const [a,y,c]=k.split(',').map(Number),distance=Math.abs(a-x)+Math.abs(c-z);
+  if(y!==0||!distance||distance>4)continue;
+  const fire=preferFire&&b.type==='campProp'&&b.kind==='fire';
+  if(!fire&&!['path','house','balcony'].includes(b.type))continue;
+  // Close fires win ties for benches; nearer paths/buildings always remain useful.
+  candidates.push({x:a,z:c,distance,priority:fire?0:b.type==='path'?1:2});
+ }
+ candidates.sort((a,b)=>a.distance-b.distance||a.priority-b.priority||a.x-b.x||a.z-b.z);
+ if(!candidates.length)return 0;
+ const dx=candidates[0].x-x,dz=candidates[0].z-z;
+ return Math.abs(dx)>Math.abs(dz)?Math.sign(dx)*Math.PI/2:dz>=0?0:Math.PI;
 }

@@ -96,3 +96,49 @@ header{top:16px;left:20px;right:20px;gap:12px}
 .tool{font-family:Georgia,'Times New Roman',serif;font-size:11px;color:var(--pine)}
 .tool-icon{display:block;width:26px;height:26px;margin:0 auto 4px}
 .tool.active{color:var(--pine)}
+
+/* Phone drawer: compact controls, readable native pickers, and space to build. */
+@media(max-width:600px),(max-height:500px) and (pointer:coarse){
+ .dock{width:min(560px,calc(100vw - 12px));bottom:max(6px,env(safe-area-inset-bottom))}
+ .dock-clip{padding:0 2px}
+ .dock-panel{padding:8px;max-height: min(46dvh,340px);border-radius:15px;overscroll-behavior:contain}
+ .dock-heading{margin-bottom:4px;gap:6px}
+ .dock-heading h2{font-size:11px}
+ .dock-actions{gap:4px}
+ .dock-actions .secondary{min-height:44px;padding:5px 8px;font-size:11px}
+ #discovery-count{display:none}
+ .palette{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+ .tool-group{width:100%;min-width:0}
+ .tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+ .tool{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:44px;padding:5px 2px;font-size:11px}
+ .tool-icon{width:20px;height:20px;flex-shrink:0;margin:0}
+ .tool kbd{display:none}
+ .material-group{width:100%;padding:6px 0 0;border-left:0;border-top:1px solid #dee3d5;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:3px 8px}
+ .material-group label{display:block;font-size:8px}
+ .material-group label[for="wood"]{grid-column:1;grid-row:1}
+ .material-group label[for="roof"]{grid-column:2;grid-row:1}
+ .material-group select{grid-row:2}
+ .water-options{width:100%;padding:6px 0 0;border-left:0;border-top:1px solid #dee3d5;display:grid;grid-template-columns:80px minmax(0,1fr);gap:6px;align-items:center}
+ .water-options label{font-size:8px;letter-spacing:.6px}
+ .water-options p{display:none}
+ .dock select{width:100%;max-width:none;min-width:0;min-height:44px;font-size:16px;padding:6px;text-overflow:ellipsis}
+ .dock-bottom{margin:0;padding:0;border:0}
+ .help summary{min-height:44px;display:flex;align-items:center;font-size:11px}
+ .help summary::before{content:'▸';margin-right:5px}
+ .help[open] summary::before{content:'▾'}
+ .help-content{font-size:12px;line-height:1.5}
+ .tasks-panel{margin:4px 0 8px;padding:10px;gap:8px}
+ .dock-launcher{margin-top:4px;gap:0}
+ .logo-toggle{width:48px;height:44px;padding:3px 8px 8px;border-radius:14px}
+ .logo-toggle img{width:30px;height:30px}
+ .dock[data-open="true"] .logo-toggle{border-radius:14px}
+ .dock-caption{display:none}
+}
+@media(max-width:350px){.tool{font-size:10px;gap:3px}.tool-icon{width:18px;height:18px}}
+@media(max-height:500px) and (pointer:coarse){
+ .dock-panel{max-height:55dvh}
+ .tools{grid-template-columns:repeat(8,minmax(0,1fr))}
+ .tool{flex-direction:column;font-size:10px;gap:2px}
+ .dock-heading h2{display:none}
+ .dock-heading{justify-content:flex-end}
+}
